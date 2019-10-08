@@ -29,6 +29,9 @@ namespace sdslib
 
         public virtual void Extract(string destination)
         {
+            if (!Directory.Exists(Path.GetDirectoryName(destination)))
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+
             using (FileStream file = new FileStream(destination, FileMode.CreateNew, FileAccess.Write))
             {
                 Data.Seek(AdditionalHeaderSize, SeekOrigin.Begin);

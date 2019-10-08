@@ -380,9 +380,6 @@ namespace sdslib
 
         public void ExtractAllFiles(string path)
         {
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-
             foreach (File file in Files)
             {
                 if (file is Script)
