@@ -377,5 +377,20 @@ namespace sdslib
                 return dataBlocks;
             }
         }
+
+        public void ExtractAllFiles(string path)
+        {
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+
+            foreach (File file in Files)
+            {
+                if (file is Script)
+                    file.Extract(path);
+
+                else
+                    file.Extract(path + "\\" + file.GetName());
+            }
+        }
     }
 }
