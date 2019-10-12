@@ -91,17 +91,16 @@ namespace sdslib
 
         public override void Extract(string destination)
         {
-            if (GetSourcePath() != "not available")
-                destination += GetSourcePath().Replace("/", "\\");
-
-            if (!Directory.Exists(destination))
-                Directory.CreateDirectory(destination);
-
             Data.Seek(AdditionalHeaderSize, SeekOrigin.Begin);
 
             for (int i = 0; i < NumberOfScripts; i++)
             {
-                using (FileStream script = new FileStream(destination + @"\" + Scripts[i].GetScriptName(),
+                if (!Directory.Exists(destination + @"\" + 
+                    Path.GetDirectoryName(Scripts[i].GetScriptPath())))
+                    Directory.CreateDirectory(destination + @"\" + 
+                        Path.GetDirectoryName(Scripts[i].GetScriptPath()));
+
+            using (FileStream script = new FileStream(destination + @"\" + Scripts[i].GetScriptPath(),
                     FileMode.CreateNew, FileAccess.Write))
                 {
                     Data.Seek(Scripts[i].AdditionalScriptFileHeaderSize, SeekOrigin.Current);

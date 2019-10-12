@@ -16,39 +16,39 @@ namespace sdslib
         public string GetPlatform() { return Platform; }
 
         private uint ResourceTypeTableOffset;
-        public uint GetResourceTypeTableOffset() { return ResourceTypeTableOffset; }
+        protected uint GetResourceTypeTableOffset() { return ResourceTypeTableOffset; }
 
         private uint BlockTableOffset;
-        public uint GetBlockTableOffset() { return BlockTableOffset; }
+        protected uint GetBlockTableOffset() { return BlockTableOffset; }
         protected void SetBlockTableOffset(uint blockTableOffset) { BlockTableOffset = blockTableOffset; }
 
         private uint XmlOffset;
-        public uint GetXmlOffset() { return XmlOffset; }
+        protected uint GetXmlOffset() { return XmlOffset; }
         protected void SetXmlOffset(uint xmlOffset) { XmlOffset = xmlOffset; }
 
         private uint SlotRamRequired;
-        public uint GetSlotRamRequired() { return SlotRamRequired; }
+        protected uint GetSlotRamRequired() { return SlotRamRequired; }
         protected void SetSlotRamRequired(uint slotRamRequired) { SlotRamRequired = slotRamRequired; }
 
         private uint SlotVRamRequired;
-        public uint GetSlotVRamRequired() { return SlotVRamRequired; }
+        protected uint GetSlotVRamRequired() { return SlotVRamRequired; }
         protected void SetSlotVRamRequired(uint slotVRamRequired) { SlotVRamRequired = slotVRamRequired; }
 
         private uint OtherRamRequired;
-        public uint GetOtherRamRequired() { return OtherRamRequired; }
+        protected uint GetOtherRamRequired() { return OtherRamRequired; }
         protected void SetOtherRamRequired(uint otherRamRequired) { OtherRamRequired = otherRamRequired; }
 
         private uint OtherVRamRequired;
-        public uint GetOtherVRamRequired() { return OtherVRamRequired; }
+        protected uint GetOtherVRamRequired() { return OtherVRamRequired; }
         protected void SetOtherVRamRequired(uint otherVRamRequired) { OtherVRamRequired = otherVRamRequired; }
 
         private uint NumberOfFiles;
         public uint GetNumberOfFiles() { return NumberOfFiles; }
 
         private uint Checksum;
-        public uint GetChecksum() { return Checksum; }
+        protected uint GetChecksum() { return Checksum; }
         protected void SetChecksum(uint checksum) { Checksum = checksum; }
-        public uint CalculateChecksum()
+        protected uint CalculateChecksum()
         {
             byte[] Bytes = new byte[52];
             Array.Copy(BitConverter.GetBytes(ResourceTypeTableOffset), 0, Bytes, 0, Constants.DataTypesSizes.UInt32);
@@ -81,7 +81,7 @@ namespace sdslib
                     throw new NotSupportedException("Unsupported version of SDS file!");
 
                 Platform = fileStream.ReadString(Constants.DataTypesSizes.UInt32);
-                if (Platform != "PC" && Platform != "PS3" && Platform != "XBOX")
+                if (Platform != "PC")
                     throw new NotSupportedException("Unsupported platform!");
 
                 if (fileStream.ReadUInt32() != Constants.SdsHeader.Unknown32_C)

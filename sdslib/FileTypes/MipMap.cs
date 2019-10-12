@@ -1,12 +1,12 @@
 ﻿namespace sdslib
 {
-    public class MimMap : File
+    public class MipMap : File
     {
         byte[] Unknown32;
         byte[] Unknown32_4;
         byte[] Unknown8;
 
-        public MimMap(FileHeader header, string name, byte[] data)
+        public MipMap(FileHeader header, string name, byte[] data)
             : base(header, name, data)
         {
             Name = "MIP_" + Name;
@@ -20,7 +20,7 @@
 
         public override string GetSourcePath()
         {
-            return Name.Replace("MIP_", string.Empty);
+            return Name;
         }
     }
 }

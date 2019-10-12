@@ -8,7 +8,7 @@ using zlib;
 namespace sdslib
 {
     /// <summary>
-    /// 
+    /// Provides functions for extracting or replacing files in SDS file (version 19).
     /// </summary>
     public class SdsFile : SdsHeader
     {
@@ -109,6 +109,7 @@ namespace sdslib
                     string typeName = string.Empty;
                     string prevTypeName = string.Empty;
                     int typeNameCounter = 0;
+
                     while (xmlReader.Read())
                     {
                         if (xmlReader.NodeType == XmlNodeType.Element)
@@ -124,11 +125,22 @@ namespace sdslib
 
                                 if (sourceDataDecription == "not available")
                                 {
-                                    if (prevTypeName != typeName)
-                                        typeNameCounter = 0;
+                                    if (prevTypeName == "VertexBufferPool" &&
+                                        typeName == "IndexBufferPool")
+                                    {
+                                        typeNameCounter++;
+                                    }
+
+                                    else if (prevTypeName == "IndexBufferPool") { }
 
                                     else
-                                        typeNameCounter++;
+                                    {
+                                        if (prevTypeName != typeName)
+                                            typeNameCounter = 0;
+
+                                        else
+                                            typeNameCounter++;
+                                    }
 
                                     fileNames.Add(string.Format("{0}_{1}.bin", typeName, typeNameCounter));
                                     prevTypeName = typeName;
@@ -170,7 +182,7 @@ namespace sdslib
                         break;
 
                     case "Mipmap":
-                        Files.Add(new MimMap(fileHeader, fileNames[i], fileData));
+                        Files.Add(new MipMap(fileHeader, fileNames[i], fileData));
                         break;
 
                     case "Script":
@@ -204,7 +216,8 @@ namespace sdslib
                 throw new Exception("");
 
             if (resourceTypeID > ResourceTypeNames.Count - 1)
-                throw new IndexOutOfRangeException(resourceTypeID.ToString() + " is out of range!");
+                throw new IndexOutOfRangeException(
+                    resourceTypeID.ToString() + " is out of range!");
 
             return ResourceTypeNames[(int)resourceTypeID];
         }
@@ -257,7 +270,8 @@ namespace sdslib
                     sds.WriteUInt32((uint)ResourceTypeNames[i].Length);
                     sds.WriteString(ResourceTypeNames[i], ResourceTypeNames[i].Length);
 
-                    if (ResourceTypeNames[i] == "IndexBufferPool" || ResourceTypeNames[i] == "PREFAB")
+                    if (ResourceTypeNames[i] == "IndexBufferPool" || 
+                        ResourceTypeNames[i] == "PREFAB")
                         sds.Write(new byte[] { 0x03, 0x00, 0x00, 0x00 });
 
                     else if (ResourceTypeNames[i] == "VertexBufferPool")
@@ -277,15 +291,18 @@ namespace sdslib
                     {
                         byte[] blockData = block.ReadAllBytes();
                         MemoryStream compressedBlock = new MemoryStream();
-                        ZOutputStream compressStream = new ZOutputStream(compressedBlock, zlibConst.Z_BEST_COMPRESSION);
+                        ZOutputStream compressStream = new ZOutputStream(compressedBlock, 
+                            zlibConst.Z_BEST_COMPRESSION);
                         compressStream.Write(blockData, 0, blockData.Length);
                         compressStream.finish();
                         sds.WriteUInt32((uint)compressStream.TotalOut + 32U);
                         sds.WriteUInt8(1);
                         sds.WriteUInt32((uint)block.Length);
-                        sds.Write(new byte[] { 0x20, 0x00, 0x00, 0x00, 0x00, 0x40, 0x01, 0x00, 0x01, 0x00, 0x0F, 0x08 });
+                        sds.Write(new byte[] { 0x20, 0x00, 0x00, 0x00, 0x00,
+                            0x40, 0x01, 0x00, 0x01, 0x00, 0x0F, 0x08 });
                         sds.WriteUInt32((uint)compressStream.TotalOut);
-                        sds.Write(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
+                        sds.Write(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
                         compressedBlock.SeekToStart();
                         sds.Write(compressedBlock.ReadAllBytes());
                     }
@@ -312,10 +329,10 @@ namespace sdslib
 
                 sds.Seek(GetXmlOffset(), SeekOrigin.Begin);
 
-                sds.WriteString(CreateXML());
+                sds.WriteString(CreateXMLString());
             }
 
-            string CreateXML()
+            string CreateXMLString()
             {
                 string xmlFile = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<xml>\n";
 
@@ -381,13 +398,56 @@ namespace sdslib
         public void ExtractAllFiles(string path)
         {
             foreach (File file in Files)
-            {
-                if (file is Script)
-                    file.Extract(path);
+                file.Extract(string.Format(@"{0}\{1}", path, file.GetSourcePath() != "not available" ? 
+                    file.GetSourcePath() : file.GetName()));
+        }
 
-                else
-                    file.Extract(path + "\\" + file.GetName());
+        public void ExtractFilesByTypeName(Type type, string destPath)
+        {
+            foreach (File file in GetFiles())
+            {
+                if (file.GetType() == type)
+                    file.Extract(string.Format(@"{0}\{1}\{2}", destPath, file.GetSourcePath() != "not available" ? file.GetSourcePath() : ""
+                        , file.GetName()));
             }
+        }
+
+        public void ExtractFileByName(string fileName, string destPah)
+        {
+            File file = null;
+
+            foreach (File _file in GetFiles())
+            {
+                if (_file.GetName() == fileName)
+                {
+                    file = _file;
+                    break;
+                }
+            }
+
+            if (file == null)
+                throw new Exception("File not found.");
+
+            file.Extract(destPah);
+        }
+
+        public void ReplaceFileByName(string fileName, string newFilePath)
+        {
+            File file = null;
+
+            foreach (File _file in GetFiles())
+            {
+                if (_file.GetName() == fileName)
+                {
+                    file = _file;
+                    break;
+                }
+            }
+
+            if (file == null)
+                throw new Exception("File not found.");
+
+            file.ReplaceFile(newFilePath);
         }
     }
 }

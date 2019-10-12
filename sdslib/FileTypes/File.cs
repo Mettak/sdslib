@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace sdslib
 {
@@ -53,6 +54,9 @@ namespace sdslib
 
         public virtual void ReplaceFile(string newFilePath)
         {
+            if (!System.IO.File.Exists(newFilePath))
+                throw new Exception("File does not exist.");
+
             using (FileStream newFile = new FileStream(newFilePath, FileMode.Open, FileAccess.Read))
             {
                 Data.SeekToStart();

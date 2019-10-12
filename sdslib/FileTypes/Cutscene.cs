@@ -25,10 +25,10 @@ namespace sdslib
             CutsceneNameLenght = Data.ReadUInt16();
             CutsceneName = Data.ReadString((int)CutsceneNameLenght);
             Name = CutsceneName + ".cutscene";
-            Data.Seek(Empty32.Length + Separator.Length, System.IO.SeekOrigin.Current);
+            Data.Seek(Empty32.Length + Separator.Length, SeekOrigin.Current);
             GcsFileName = CutsceneName + ".gcs";
             GcsFileSize = Data.ReadUInt32() - 4U;
-            Data.Seek(GcsFileSize + Separator.Length, System.IO.SeekOrigin.Current);
+            Data.Seek(GcsFileSize + Separator.Length, SeekOrigin.Current);
             SpdFileName = CutsceneName + ".spd";
             SpdFileSize = Data.ReadUInt32() - 4U;
 
@@ -40,9 +40,13 @@ namespace sdslib
 
         public override void Extract(string destinationDirectory)
         {
-            Data.Seek(AdditionalHeaderSize + Separator.Length + Constants.DataTypesSizes.UInt32, System.IO.SeekOrigin.Begin);
+            if (!Directory.Exists(destinationDirectory))
+                Directory.CreateDirectory(destinationDirectory);
 
-            using (FileStream gcsFile = new FileStream(destinationDirectory + @"\" + GcsFileName, FileMode.CreateNew, FileAccess.Write))
+            Data.Seek(AdditionalHeaderSize + Separator.Length + Constants.DataTypesSizes.UInt32, SeekOrigin.Begin);
+
+            using (FileStream gcsFile = new FileStream(destinationDirectory + @"\" + GcsFileName, 
+                FileMode.CreateNew, FileAccess.Write))
             {
                 byte[] gcsFileData = Data.ReadBytes((int)GcsFileSize);
                 gcsFile.Write(gcsFileData, 0, gcsFileData.Length);
@@ -50,7 +54,8 @@ namespace sdslib
 
             Data.Seek(Separator.Length + Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
 
-            using (FileStream spdFile = new FileStream(destinationDirectory + @"\" + SpdFileName, FileMode.CreateNew, FileAccess.Write))
+            using (FileStream spdFile = new FileStream(destinationDirectory + @"\" + SpdFileName, 
+                FileMode.CreateNew, FileAccess.Write))
             {
                 byte[] spdFileData = Data.ReadBytes((int)SpdFileSize);
                 spdFile.Write(spdFileData, 0, spdFileData.Length);

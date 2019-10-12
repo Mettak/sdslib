@@ -28,7 +28,7 @@
 
         public override string GetSourcePath()
         {
-            return SourcePath;
+            return SourcePath + "_XML.bin";
         }
     }
 }
