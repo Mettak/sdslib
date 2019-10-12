@@ -21,15 +21,13 @@ SdsFile sds = new SdsFile(@"...Mafia II\pc\sds\mapa\mapa_city.sds");
 sds.ExtractAllFiles(@"C:\Users\Mettak\Desktop\mapa_city");
 
 /* Extracts single file to the selected path */
-sds.GetFiles()[0].Extract(@"C:\Users\Mettak\Desktop\map.dds");
+sds.ExtractFileByName("map.dds", @"C:\Users\Mettak\Desktop\map.dds");
 
 /* Extracts all textures from current SDS (if contains any) */
-foreach (var File in sds.GetFiles())
-  if (File is Texture)
-    File.Extract(@"C:\Users\Mettak\tex\" + File.GetName());
+sds.ExtractFilesByTypeName(typeof(Texture), @"C:\Users\Mettak\Desktop\tex");
 
 /* Replace file */
-sds.GetFiles()[0].Replace(@"C:\Users\Mettak\Desktop\modified_map.dds");
+sds.ReplaceFileByName("map.dds", @"C:\Users\Mettak\Desktop\modified_map.dds");
 
 /* Saves modified SDS file */
 sds.Save();
