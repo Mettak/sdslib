@@ -407,8 +407,8 @@ namespace sdslib
             foreach (File file in GetFiles())
             {
                 if (file.GetType() == type)
-                    file.Extract(string.Format(@"{0}\{1}\{2}", destPath, file.GetSourcePath() != "not available" ? file.GetSourcePath() : ""
-                        , file.GetName()));
+                    file.Extract(string.Format(@"{0}\{1}", destPath, file.GetSourcePath() != "not available" ? 
+                        file.GetSourcePath() : file.GetName()));
             }
         }
 
