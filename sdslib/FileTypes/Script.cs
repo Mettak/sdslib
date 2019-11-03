@@ -26,7 +26,8 @@ namespace sdslib
                 this.ScriptPathSize = ScriptPathSize;
                 this.ScriptPath = ScriptPath;
                 this.ScriptSize = ScriptSize;
-                AdditionalScriptFileHeaderSize = (Constants.DataTypesSizes.UInt32 * 5) + Constants.DataTypesSizes.UInt16 + (uint)ScriptPath.Length;
+                AdditionalScriptFileHeaderSize = (Constants.DataTypesSizes.UInt32 * 5) + 
+                    Constants.DataTypesSizes.UInt16 + (uint)ScriptPath.Length;
             }
 
             public string GetScriptName()
@@ -87,6 +88,11 @@ namespace sdslib
             }
 
             Data.SeekToStart();
+        }
+
+        public override void ReplaceFile(string newFilePath)
+        {
+            throw new System.NotSupportedException("Not supported.");
         }
 
         public override void Extract(string destination)

@@ -10,7 +10,7 @@
 
         public override string GetSourcePath()
         {
-            return Name.Replace(".anim2", string.Empty);
+            return Name;
         }
     }
 }

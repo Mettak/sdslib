@@ -4,6 +4,9 @@ using System.Text;
 
 namespace sdslib
 {
+    /// <summary>
+    /// Provides help functions for browsing SDS files
+    /// </summary>
     public static class StreamHelpers
     {
         public static byte[] ReadAllBytes(this Stream stream)

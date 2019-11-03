@@ -173,9 +173,9 @@ namespace sdslib
                         Files.Add(new Animation2(fileHeader, fileNames[i], fileData));
                         break;
 
-                    case "Cutscene":
+                    /*case "Cutscene":
                         Files.Add(new Cutscene(fileHeader, fileData));
-                        break;
+                        break;*/
 
                     case "MemFile":
                         Files.Add(new MemFile(fileHeader, fileNames[i], fileData));
