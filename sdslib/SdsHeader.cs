@@ -1,67 +1,48 @@
-﻿using System;
+﻿using sdslib.Models;
+using System;
 using System.IO;
 
 namespace sdslib
 {
     public class SdsHeader
     {
-        private string SdsFileName;
-        public string GetSdsFileName() { return SdsFileName; }
-        protected void SetSdsFileName(string sdsFileName) { SdsFileName = sdsFileName; }
+        public uint Version { get; }
 
-        private uint Version;
-        public uint GetVersion() { return Version; }
+        public EPlatform Platform { get; set; }
 
-        private string Platform;
-        public string GetPlatform() { return Platform; }
+        public uint ResourceTypeTableOffset { get; set; }
 
-        private uint ResourceTypeTableOffset;
-        protected uint GetResourceTypeTableOffset() { return ResourceTypeTableOffset; }
+        public uint BlockTableOffset { get; set; }
 
-        private uint BlockTableOffset;
-        protected uint GetBlockTableOffset() { return BlockTableOffset; }
-        protected void SetBlockTableOffset(uint blockTableOffset) { BlockTableOffset = blockTableOffset; }
+        public uint XmlOffset { get; set; }
 
-        private uint XmlOffset;
-        protected uint GetXmlOffset() { return XmlOffset; }
-        protected void SetXmlOffset(uint xmlOffset) { XmlOffset = xmlOffset; }
+        public uint SlotRamRequired { get; set; }
 
-        private uint SlotRamRequired;
-        protected uint GetSlotRamRequired() { return SlotRamRequired; }
-        protected void SetSlotRamRequired(uint slotRamRequired) { SlotRamRequired = slotRamRequired; }
+        public uint SlotVRamRequired { get; set; }
 
-        private uint SlotVRamRequired;
-        protected uint GetSlotVRamRequired() { return SlotVRamRequired; }
-        protected void SetSlotVRamRequired(uint slotVRamRequired) { SlotVRamRequired = slotVRamRequired; }
+        public uint OtherRamRequired { get; set; }
 
-        private uint OtherRamRequired;
-        protected uint GetOtherRamRequired() { return OtherRamRequired; }
-        protected void SetOtherRamRequired(uint otherRamRequired) { OtherRamRequired = otherRamRequired; }
+        public uint OtherVRamRequired { get; set; }
 
-        private uint OtherVRamRequired;
-        protected uint GetOtherVRamRequired() { return OtherVRamRequired; }
-        protected void SetOtherVRamRequired(uint otherVRamRequired) { OtherVRamRequired = otherVRamRequired; }
+        public uint NumberOfFiles { get; set; }
 
-        private uint NumberOfFiles;
-        public uint GetNumberOfFiles() { return NumberOfFiles; }
-
-        private uint Checksum;
-        protected uint GetChecksum() { return Checksum; }
-        protected void SetChecksum(uint checksum) { Checksum = checksum; }
-        protected uint CalculateChecksum()
+        public uint Checksum
         {
-            byte[] Bytes = new byte[52];
-            Array.Copy(BitConverter.GetBytes(ResourceTypeTableOffset), 0, Bytes, 0, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(BlockTableOffset), 0, Bytes, 4, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(XmlOffset), 0, Bytes, 8, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(SlotRamRequired), 0, Bytes, 12, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(SlotVRamRequired), 0, Bytes, 16, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(OtherRamRequired), 0, Bytes, 20, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(OtherVRamRequired), 0, Bytes, 24, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown32_2C), 0, Bytes, 28, Constants.DataTypesSizes.UInt32);
-            Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown64_30), 0, Bytes, 32, Constants.DataTypesSizes.UInt64);
-            Array.Copy(BitConverter.GetBytes(NumberOfFiles), 0, Bytes, 48, Constants.DataTypesSizes.UInt32);
-            return FNV.Hash32(Bytes);
+            get
+            {
+                byte[] Bytes = new byte[52];
+                Array.Copy(BitConverter.GetBytes(ResourceTypeTableOffset), 0, Bytes, 0, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(BlockTableOffset), 0, Bytes, 4, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(XmlOffset), 0, Bytes, 8, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(SlotRamRequired), 0, Bytes, 12, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(SlotVRamRequired), 0, Bytes, 16, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(OtherRamRequired), 0, Bytes, 20, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(OtherVRamRequired), 0, Bytes, 24, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown32_2C), 0, Bytes, 28, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown64_30), 0, Bytes, 32, Constants.DataTypesSizes.UInt64);
+                Array.Copy(BitConverter.GetBytes(NumberOfFiles), 0, Bytes, 48, Constants.DataTypesSizes.UInt32);
+                return FNV.Hash32(Bytes);
+            }
         }
 
         public SdsHeader(string sdsFilePath)
@@ -74,14 +55,13 @@ namespace sdslib
                 if (fileStream.ReadString(Constants.DataTypesSizes.UInt32) != "SDS")
                     throw new Exception("This file does not contain SDS header!");
 
-                SdsFileName = Path.GetFileNameWithoutExtension(sdsFilePath);
-
                 Version = fileStream.ReadUInt32();
                 if (Version > Constants.SdsHeader.Version)
                     throw new NotSupportedException("Unsupported version of SDS file!");
 
-                Platform = fileStream.ReadString(Constants.DataTypesSizes.UInt32);
-                if (Platform != "PC")
+                Platform = (EPlatform)Enum.Parse(typeof(EPlatform), 
+                    fileStream.ReadString(Constants.DataTypesSizes.UInt32));
+                if (Platform != EPlatform.PC)
                     throw new NotSupportedException("Unsupported platform!");
 
                 if (fileStream.ReadUInt32() != Constants.SdsHeader.Unknown32_C)
@@ -110,9 +90,9 @@ namespace sdslib
 
                 NumberOfFiles = fileStream.ReadUInt32();
 
-                Checksum = fileStream.ReadUInt32();
+                uint checksum = fileStream.ReadUInt32();
 
-                if (Checksum != CalculateChecksum())
+                if (Checksum != checksum)
                     throw new Exception("Checksum difference!");
             }
         }

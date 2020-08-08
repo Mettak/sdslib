@@ -27,7 +27,7 @@ namespace sdslib
             // Gets resource type names
             using (FileStream fileStream = new FileStream(Path, FileMode.Open, FileAccess.Read))
             {
-                fileStream.Seek(GetResourceTypeTableOffset(), SeekOrigin.Begin);
+                fileStream.Seek(ResourceTypeTableOffset, SeekOrigin.Begin);
                 uint numberOfResources = fileStream.ReadUInt32();
                 ResourceTypeNames = new List<string>((int)numberOfResources);
 
@@ -44,7 +44,7 @@ namespace sdslib
             MemoryStream DecompressedData;
             using (FileStream fileStream = new FileStream(Path, FileMode.Open, FileAccess.Read))
             {
-                fileStream.Seek(GetBlockTableOffset(), SeekOrigin.Begin);
+                fileStream.Seek(BlockTableOffset, SeekOrigin.Begin);
 
                 if (fileStream.ReadUInt32() != 1819952469U)
                     throw new Exception("Invalid SDS file!");
@@ -100,12 +100,12 @@ namespace sdslib
             List<string> fileNames;
             using (FileStream fileStream = new FileStream(Path, FileMode.Open, FileAccess.Read))
             {
-                fileStream.Seek(GetXmlOffset(), SeekOrigin.Begin);
+                fileStream.Seek(XmlOffset, SeekOrigin.Begin);
                 byte[] xmlBytes = fileStream.ReadBytes((int)fileStream.Length - (int)fileStream.Position);
                 using (MemoryStream memoryStream = new MemoryStream(xmlBytes))
                 using (XmlReader xmlReader = XmlReader.Create(memoryStream))
                 {
-                    fileNames = new List<string>((int)GetNumberOfFiles());
+                    fileNames = new List<string>((int)NumberOfFiles);
                     string typeName = string.Empty;
                     string prevTypeName = string.Empty;
                     int typeNameCounter = 0;
@@ -156,11 +156,11 @@ namespace sdslib
                 }
             }
 
-            if (fileNames.Count != GetNumberOfFiles())
+            if (fileNames.Count != NumberOfFiles)
                 throw new Exception("Error while getting file names");
 
-            Files = new List<File>((int)GetNumberOfFiles());
-            for (int i = 0; i < GetNumberOfFiles(); i++)
+            Files = new List<File>((int)NumberOfFiles);
+            for (int i = 0; i < NumberOfFiles; i++)
             {
                 FileHeader fileHeader = new FileHeader(DecompressedData.ReadUInt32(), DecompressedData.ReadUInt32(), DecompressedData.ReadUInt16(),
                     DecompressedData.ReadUInt32(), DecompressedData.ReadUInt32(), DecompressedData.ReadUInt32(), DecompressedData.ReadUInt32(), DecompressedData.ReadUInt32());
@@ -234,33 +234,33 @@ namespace sdslib
 
             using (FileStream sds = new FileStream(destinationPath, FileMode.Create, FileAccess.ReadWrite))
             {
-                SetSlotRamRequired(0U);
-                SetSlotVRamRequired(0U);
-                SetOtherRamRequired(0U);
-                SetOtherVRamRequired(0U);
+                SlotRamRequired = 0U;
+                SlotVRamRequired = 0U;
+                OtherRamRequired = 0U;
+                OtherVRamRequired = 0U;
                 foreach (var File in Files)
                 {
-                    SetSlotRamRequired(GetSlotRamRequired() + File.GetSlotRamRequired());
-                    SetSlotVRamRequired(GetSlotVRamRequired() + File.GetSlotVRamRequired());
-                    SetOtherRamRequired(GetOtherRamRequired() + File.GetOtherRamRequired());
-                    SetOtherVRamRequired(GetOtherVRamRequired() + File.GetOtherVRamRequired());
+                    SlotRamRequired += File.GetSlotRamRequired();
+                    SlotVRamRequired += File.GetSlotVRamRequired();
+                    OtherRamRequired += File.GetOtherRamRequired();
+                    OtherVRamRequired +=File.GetOtherVRamRequired();
                 }
 
                 sds.WriteString("SDS", Constants.DataTypesSizes.UInt32);
-                sds.WriteUInt32(GetVersion());
-                sds.WriteString(GetPlatform(), Constants.DataTypesSizes.UInt32);
+                sds.WriteUInt32(Version);
+                sds.WriteString(Platform.ToString(), Constants.DataTypesSizes.UInt32);
                 sds.WriteUInt32(Constants.SdsHeader.Unknown32_C);
-                sds.WriteUInt32(GetResourceTypeTableOffset());
-                sds.WriteUInt32(GetBlockTableOffset());
+                sds.WriteUInt32(ResourceTypeTableOffset);
+                sds.WriteUInt32(BlockTableOffset);
                 sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
-                sds.WriteUInt32(GetSlotRamRequired());
-                sds.WriteUInt32(GetSlotVRamRequired());
-                sds.WriteUInt32(GetOtherRamRequired());
-                sds.WriteUInt32(GetOtherVRamRequired());
+                sds.WriteUInt32(SlotRamRequired);
+                sds.WriteUInt32(SlotVRamRequired);
+                sds.WriteUInt32(OtherRamRequired);
+                sds.WriteUInt32(OtherVRamRequired);
                 sds.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
                 sds.WriteUInt64(Constants.SdsHeader.Unknown64_30);
                 sds.WriteUInt64(Constants.SdsHeader.Uknown64_38);
-                sds.WriteUInt32(GetNumberOfFiles());
+                sds.WriteUInt32(NumberOfFiles);
                 sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
 
                 sds.WriteUInt32((uint)ResourceTypeNames.Count);
@@ -319,15 +319,14 @@ namespace sdslib
 
                 sds.Write(new byte[] { 0x0, 0x0, 0x0, 0x0, 0x0 });
 
-                SetXmlOffset((uint)sds.Position);
+                XmlOffset = (uint)sds.Position;
                 sds.Seek(24, SeekOrigin.Begin);
-                sds.WriteUInt32(GetXmlOffset());
+                sds.WriteUInt32(XmlOffset);
 
-                SetChecksum(CalculateChecksum());
                 sds.Seek(68U, SeekOrigin.Begin);
-                sds.WriteUInt32(GetChecksum());
+                sds.WriteUInt32(Checksum);
 
-                sds.Seek(GetXmlOffset(), SeekOrigin.Begin);
+                sds.Seek(XmlOffset, SeekOrigin.Begin);
 
                 sds.WriteString(CreateXMLString());
             }

@@ -13,6 +13,7 @@
         public static class SdsHeader
         {
             public const int StandardHeaderSize = 72;
+            public const int ResourceTypeTableOffset = 72;
             public const uint Version = 19U;
             public const uint Unknown32_C = 1610314995U;
             public const uint Unknown32_2C = 1U;
