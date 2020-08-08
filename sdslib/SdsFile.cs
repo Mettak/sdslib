@@ -258,7 +258,7 @@ namespace sdslib
                 sds.WriteUInt32(OtherRamRequired);
                 sds.WriteUInt32(OtherVRamRequired);
                 sds.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
-                sds.WriteUInt64(Constants.SdsHeader.Unknown64_30);
+                sds.WriteUInt64((ulong)GameVersion);
                 sds.WriteUInt64(Constants.SdsHeader.Uknown64_38);
                 sds.WriteUInt32(NumberOfFiles);
                 sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
