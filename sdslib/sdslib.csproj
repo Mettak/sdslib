@@ -54,8 +54,12 @@
     <Compile Include="FileTypes\MemFile.cs" />
     <Compile Include="FileTypes\MipMap.cs" />
     <Compile Include="FileTypes\Script.cs" />
+    <Compile Include="Models\EDataBlockType.cs" />
     <Compile Include="Models\EPlatform.cs" />
-    <Compile Include="Models\GameVersion.cs" />
+    <Compile Include="Models\EGameVersion.cs" />
+    <Compile Include="Models\EResourceType.cs" />
+    <Compile Include="Models\ResourceInfo.cs" />
+    <Compile Include="Models\ResourceType.cs" />
     <Compile Include="SdsFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SdsHeader.cs" />
