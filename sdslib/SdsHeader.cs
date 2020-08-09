@@ -17,25 +17,23 @@ namespace sdslib
 
         public uint ResourceTypeTableOffset { get; set; }
 
-        public virtual uint BlockTableOffset { get; set; }
+        public uint BlockTableOffset { get; set; }
 
-        public virtual uint XmlOffset { get; set; }
+        public uint XmlOffset { get; set; }
 
-        public virtual uint SlotRamRequired { get; set; }
+        public uint SlotRamRequired { get; set; }
 
-        public virtual uint SlotVRamRequired { get; set; }
+        public uint SlotVRamRequired { get; set; }
 
-        public virtual uint OtherRamRequired { get; set; }
+        public uint OtherRamRequired { get; set; }
 
-        public virtual uint OtherVRamRequired { get; set; }
+        public uint OtherVRamRequired { get; set; }
 
         public EGameVersion GameVersion { get; set; }
 
-        public virtual uint NumberOfFiles { get; set; }
+        public uint NumberOfFiles { get; set; }
 
         public List<ResourceType> ResourceTypes { get; set; } = new List<ResourceType>();
-
-        public List<ResourceInfo> Resources { get; set; } = new List<ResourceInfo>();
 
         public uint Checksum
         {
@@ -124,36 +122,10 @@ namespace sdslib
                     ResourceType resourceType = new ResourceType();
                     resourceType.Id = fileStream.ReadUInt32();
                     uint resourceLenght = fileStream.ReadUInt32();
-                    resourceType.Type = (EResourceType)Enum.Parse(typeof(EResourceType), 
+                    resourceType.Name = (EResourceType)Enum.Parse(typeof(EResourceType), 
                         fileStream.ReadString((int)resourceLenght));
                     resourceType.Unknown32 = fileStream.ReadUInt32();
                     ResourceTypes.Add(resourceType);
-                }
-
-                fileStream.Seek(XmlOffset, SeekOrigin.Begin);
-                byte[] xmlBytes = fileStream.ReadBytes((int)fileStream.Length - (int)fileStream.Position);
-                using (MemoryStream memoryStream = new MemoryStream(xmlBytes))
-                using (XmlReader xmlReader = XmlReader.Create(memoryStream))
-                {
-                    ResourceInfo resourceInfo = new ResourceInfo();
-                    while (xmlReader.Read())
-                    {
-                        if (xmlReader.NodeType == XmlNodeType.Element)
-                        {
-                            if (xmlReader.Name == "TypeName")
-                            {
-                                resourceInfo = new ResourceInfo();
-                                var resourceType = (EResourceType)Enum.Parse(typeof(EResourceType), xmlReader.ReadElementContentAsString());
-                                resourceInfo.Type = ResourceTypes.First(x => x.Type == resourceType);
-                            }
-
-                            else if (xmlReader.Name == "SourceDataDescription")
-                            {
-                                resourceInfo.SourceDataDescription = xmlReader.ReadElementContentAsString();
-                                Resources.Add(resourceInfo);
-                            }
-                        }
-                    }
                 }
             }
         }

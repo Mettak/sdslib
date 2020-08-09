@@ -10,6 +10,19 @@ namespace sdslib.Models
     {
         public string SourceDataDescription { get; set; }
 
+        public string Name
+        {
+            get
+            {
+                if (SourceDataDescription == "not available")
+                {
+                    return Guid.NewGuid().ToString();
+                }
+
+                return SourceDataDescription;
+            }
+        }
+
         public ResourceType Type { get; set; }
     }
 }

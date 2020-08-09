@@ -1,8 +1,9 @@
 ﻿using sdslib.Models;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Xml;
 using zlib;
 
@@ -11,23 +12,23 @@ namespace sdslib
     /// <summary>
     /// Provides functions for extracting or replacing files in SDS file (version 19).
     /// </summary>
-    public class SdsFile : SdsHeader
+    public class SdsFile
     {
-        List<File> Files;
-        public ReadOnlyCollection<File> GetFiles() { return Files.AsReadOnly(); }
+        public List<Resource> Resources { get; set; } = new List<Resource>();
+
+        public SdsHeader Header { get; set; }
 
         public string Path { get; }
 
         public SdsFile(string sdsPath)
-            : base(sdsPath)
         {
+            Header = new SdsHeader(sdsPath);
             Path = sdsPath;
 
-            //Gets decompressed data from SDS file
             MemoryStream decompressedData;
             using (FileStream fileStream = new FileStream(Path, FileMode.Open, FileAccess.Read))
             {
-                fileStream.Seek(BlockTableOffset, SeekOrigin.Begin);
+                fileStream.Seek(Header.BlockTableOffset, SeekOrigin.Begin);
 
                 if (fileStream.ReadUInt32() != 1819952469U)
                     throw new Exception("Invalid SDS file!");
@@ -74,136 +75,60 @@ namespace sdslib
                 }
 
                 decompressedData.SeekToStart();
-            }
 
-            if (decompressedData == null)
-                throw new Exception("SDS file does not contain any data!");
-
-            // Gets SDS file names from XML file which is located in the end of the file
-            List<string> fileNames;
-            using (FileStream fileStream = new FileStream(Path, FileMode.Open, FileAccess.Read))
-            {
-                fileStream.Seek(XmlOffset, SeekOrigin.Begin);
+                fileStream.Seek(Header.XmlOffset, SeekOrigin.Begin);
                 byte[] xmlBytes = fileStream.ReadBytes((int)fileStream.Length - (int)fileStream.Position);
                 using (MemoryStream memoryStream = new MemoryStream(xmlBytes))
                 using (XmlReader xmlReader = XmlReader.Create(memoryStream))
                 {
-                    fileNames = new List<string>((int)NumberOfFiles);
-                    string typeName = string.Empty;
-                    string prevTypeName = string.Empty;
-                    int typeNameCounter = 0;
-
+                    ResourceInfo resourceInfo = new ResourceInfo();
                     while (xmlReader.Read())
                     {
                         if (xmlReader.NodeType == XmlNodeType.Element)
                         {
                             if (xmlReader.Name == "TypeName")
                             {
-                                typeName = xmlReader.ReadElementContentAsString();
+                                resourceInfo = new ResourceInfo();
+                                var resourceType = (EResourceType)Enum.Parse(typeof(EResourceType), xmlReader.ReadElementContentAsString());
+                                resourceInfo.Type = Header.ResourceTypes.First(x => x.Name == resourceType);
                             }
 
-                            if (xmlReader.Name == "SourceDataDescription")
+                            else if (xmlReader.Name == "SourceDataDescription")
                             {
-                                string sourceDataDecription = xmlReader.ReadElementContentAsString();
+                                resourceInfo.SourceDataDescription = xmlReader.ReadElementContentAsString();
 
-                                if (sourceDataDecription == "not available")
+                                Resource resource = new Resource
                                 {
-                                    if (prevTypeName == "VertexBufferPool" &&
-                                        typeName == "IndexBufferPool")
-                                    {
-                                        typeNameCounter++;
-                                    }
+                                    Info = resourceInfo
+                                };
 
-                                    else if (prevTypeName == "IndexBufferPool") { }
-
-                                    else
-                                    {
-                                        if (prevTypeName != typeName)
-                                            typeNameCounter = 0;
-
-                                        else
-                                            typeNameCounter++;
-                                    }
-
-                                    fileNames.Add(string.Format("{0}_{1}.bin", typeName, typeNameCounter));
-                                    prevTypeName = typeName;
+                                uint resId = decompressedData.ReadUInt32();
+                                if (resId != resource.Info.Type.Id)
+                                {
+                                    throw new InvalidDataException();
                                 }
 
-                                else
+                                uint size = decompressedData.ReadUInt32();
+                                resource.Version = decompressedData.ReadUInt16();
+                                resource.SlotRamRequired = decompressedData.ReadUInt32();
+                                resource.SlotVRamRequired = decompressedData.ReadUInt32();
+                                resource.OtherRamRequired = decompressedData.ReadUInt32();
+                                resource.OtherVRamRequired = decompressedData.ReadUInt32();
+                                uint checksum = decompressedData.ReadUInt32();
+                                resource.Data = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
+
+                                if (checksum != resource.Checksum || size != resource.Size)
                                 {
-                                    fileNames.Add(System.IO.Path.GetFileName(sourceDataDecription));
+                                    throw new InvalidDataException();
                                 }
+
+                                Resources.Add(resource);
                             }
                         }
                     }
                 }
             }
-
-            //if (fileNames.Count != NumberOfFiles)
-            //    throw new Exception("Error while getting file names");
-
-            //Files = new List<File>((int)NumberOfFiles);
-            //for (int i = 0; i < NumberOfFiles; i++)
-            //{
-            //    FileHeader fileHeader = new FileHeader(decompressedData.ReadUInt32(), decompressedData.ReadUInt32(), decompressedData.ReadUInt16(),
-            //        decompressedData.ReadUInt32(), decompressedData.ReadUInt32(), decompressedData.ReadUInt32(), decompressedData.ReadUInt32(), decompressedData.ReadUInt32());
-
-            //    byte[] fileData = decompressedData.ReadBytes((int)(fileHeader.GetFileSize() - 30U));
-
-            //    switch (GetResourceTypeNameByID(fileHeader.GetTypeID()))
-            //    {
-            //        case "Animation2":
-            //            Files.Add(new Animation2(fileHeader, fileNames[i], fileData));
-            //            break;
-
-            //        /*case "Cutscene":
-            //            Files.Add(new Cutscene(fileHeader, fileData));
-            //            break;*/
-
-            //        case "MemFile":
-            //            Files.Add(new MemFile(fileHeader, fileNames[i], fileData));
-            //            break;
-
-            //        case "Mipmap":
-            //            Files.Add(new MipMap(fileHeader, fileNames[i], fileData));
-            //            break;
-
-            //        case "Script":
-            //            Files.Add(new Script(fileHeader, fileNames[i], fileData));
-            //            break;
-
-            //        case "Sound":
-            //            Files.Add(new Sound(fileHeader, fileNames[i], fileData));
-            //            break;
-
-            //        case "Texture":
-            //            Files.Add(new Texture(fileHeader, fileNames[i], fileData));
-            //            break;
-
-            //        case "XML":
-            //            Files.Add(new XML(fileHeader, fileNames[i], fileData));
-            //            break;
-
-            //        default:
-            //            Files.Add(new File(fileHeader, fileNames[i], fileData));
-            //            break;
-            //    }
-            //}
-
-            decompressedData.Close();
         }
-
-        //protected string GetResourceTypeNameByID(uint resourceTypeID)
-        //{
-        //    if (ResourceTypeNames == null)
-        //        throw new Exception("");
-
-        //    if (resourceTypeID > ResourceTypeNames.Count - 1)
-        //        throw new IndexOutOfRangeException(
-        //            resourceTypeID.ToString() + " is out of range!");
-
-        //    return ResourceTypeNames[(int)resourceTypeID];
-        //}
 
         //public void Save()
         //{

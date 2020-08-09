@@ -20,5 +20,10 @@
             public const int BlockSize = 16384; // 16kB
             public const uint Encrypted = 1049068U;
         }
+
+        public static class Resource
+        {
+            public const int StandardHeaderSize = 30;
+        }
     }
 }

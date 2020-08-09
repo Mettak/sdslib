@@ -12,6 +12,6 @@ namespace sdslib.Models
 
         public uint Unknown32 { get; set; }
 
-        public EResourceType Type { get; set; }
+        public EResourceType Name { get; set; }
     }
 }

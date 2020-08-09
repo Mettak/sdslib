@@ -58,6 +58,7 @@
     <Compile Include="Models\EPlatform.cs" />
     <Compile Include="Models\EGameVersion.cs" />
     <Compile Include="Models\EResourceType.cs" />
+    <Compile Include="Models\Resource.cs" />
     <Compile Include="Models\ResourceInfo.cs" />
     <Compile Include="Models\ResourceType.cs" />
     <Compile Include="SdsFile.cs" />
