@@ -1,5 +1,6 @@
 ﻿using sdslib.Models;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace sdslib
@@ -27,6 +28,8 @@ namespace sdslib
         public GameVersion GameVersion { get; set; }
 
         public uint NumberOfFiles { get; set; }
+
+        List<string> ResourceTypeNames = new List<string>();
 
         public uint Checksum
         {
@@ -61,8 +64,16 @@ namespace sdslib
                 if (Version > Constants.SdsHeader.Version)
                     throw new NotSupportedException("Unsupported version of SDS file!");
 
-                Platform = (EPlatform)Enum.Parse(typeof(EPlatform), 
-                    fileStream.ReadString(Constants.DataTypesSizes.UInt32));
+                if (Enum.TryParse(fileStream.ReadString(Constants.DataTypesSizes.UInt32), out EPlatform platform))
+                {
+                    Platform = platform;
+                }
+
+                else
+                {
+                    throw new InvalidDataException();
+                }
+                
                 if (Platform != EPlatform.PC)
                     throw new NotSupportedException("Unsupported platform!");
 
@@ -97,6 +108,16 @@ namespace sdslib
                 uint checksum = fileStream.ReadUInt32();
                 if (Checksum != checksum)
                     throw new Exception("Checksum difference!");
+
+                fileStream.Seek(ResourceTypeTableOffset, SeekOrigin.Begin);
+                uint numberOfResources = fileStream.ReadUInt32();
+                for (int i = 0; i < numberOfResources; i++)
+                {
+                    fileStream.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+                    uint resourceLenght = fileStream.ReadUInt32();
+                    ResourceTypeNames.Add(fileStream.ReadString((int)resourceLenght));
+                    fileStream.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+                }
             }
         }
     }
