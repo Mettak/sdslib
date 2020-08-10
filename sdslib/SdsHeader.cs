@@ -21,38 +21,9 @@ namespace sdslib
 
         public uint XmlOffset { get; set; }
 
-        public uint SlotRamRequired { get; set; }
-
-        public uint SlotVRamRequired { get; set; }
-
-        public uint OtherRamRequired { get; set; }
-
-        public uint OtherVRamRequired { get; set; }
-
         public EGameVersion GameVersion { get; set; }
 
-        public uint NumberOfFiles { get; set; }
-
         public List<ResourceType> ResourceTypes { get; set; } = new List<ResourceType>();
-
-        public uint Checksum
-        {
-            get
-            {
-                byte[] bytes = new byte[52];
-                Array.Copy(BitConverter.GetBytes(ResourceTypeTableOffset), 0, bytes, 0, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(BlockTableOffset), 0, bytes, 4, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(XmlOffset), 0, bytes, 8, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(SlotRamRequired), 0, bytes, 12, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(SlotVRamRequired), 0, bytes, 16, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(OtherRamRequired), 0, bytes, 20, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(OtherVRamRequired), 0, bytes, 24, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown32_2C), 0, bytes, 28, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes((ulong)GameVersion), 0, bytes, 32, Constants.DataTypesSizes.UInt64);
-                Array.Copy(BitConverter.GetBytes(NumberOfFiles), 0, bytes, 48, Constants.DataTypesSizes.UInt32);
-                return FNV.Hash32(bytes);
-            }
-        }
 
         public SdsHeader(string sdsFilePath)
         {
@@ -93,10 +64,10 @@ namespace sdslib
                 if (XmlOffset == Constants.SdsHeader.Encrypted)
                     throw new NotSupportedException("This SDS file is encrypted.");
 
-                SlotRamRequired = fileStream.ReadUInt32();
-                SlotVRamRequired = fileStream.ReadUInt32();
-                OtherRamRequired = fileStream.ReadUInt32();
-                OtherVRamRequired = fileStream.ReadUInt32();
+                uint slotRamRequired = fileStream.ReadUInt32();
+                uint slotVRamRequired = fileStream.ReadUInt32();
+                uint otherRamRequired = fileStream.ReadUInt32();
+                uint otherVRamRequired = fileStream.ReadUInt32();
 
                 if (fileStream.ReadUInt32() != Constants.SdsHeader.Unknown32_2C)
                     throw new Exception("Bytes do not match.");
@@ -109,10 +80,24 @@ namespace sdslib
                 // Skipping of null bytes
                 fileStream.Seek(Constants.DataTypesSizes.UInt64, SeekOrigin.Current);
 
-                NumberOfFiles = fileStream.ReadUInt32();
+                uint numberOfFiles = fileStream.ReadUInt32();
 
                 uint checksum = fileStream.ReadUInt32();
-                if (Checksum != checksum)
+
+                byte[] bytes = new byte[52];
+                Array.Copy(BitConverter.GetBytes(ResourceTypeTableOffset), 0, bytes, 0, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(BlockTableOffset), 0, bytes, 4, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(XmlOffset), 0, bytes, 8, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(slotRamRequired), 0, bytes, 12, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(slotVRamRequired), 0, bytes, 16, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(otherRamRequired), 0, bytes, 20, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(otherVRamRequired), 0, bytes, 24, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown32_2C), 0, bytes, 28, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes((ulong)GameVersion), 0, bytes, 32, Constants.DataTypesSizes.UInt64);
+                Array.Copy(BitConverter.GetBytes(numberOfFiles), 0, bytes, 48, Constants.DataTypesSizes.UInt32);
+                uint calculatedChecksum = FNV.Hash32(bytes);
+
+                if (calculatedChecksum != checksum)
                     throw new Exception("Checksum difference!");
 
                 fileStream.Seek(ResourceTypeTableOffset, SeekOrigin.Begin);

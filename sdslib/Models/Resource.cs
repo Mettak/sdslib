@@ -54,10 +54,7 @@ namespace sdslib.Models
                 Directory.CreateDirectory(Path.GetDirectoryName(destination));
             }
 
-            using (FileStream file = new FileStream(destination, FileMode.CreateNew, FileAccess.Write))
-            {
-                file.Write(Data, 0, Data.Length);
-            }
+            System.IO.File.WriteAllBytes(destination, Data);
         }
     }
 }

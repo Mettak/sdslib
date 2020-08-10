@@ -20,6 +20,38 @@ namespace sdslib
 
         public string Path { get; }
 
+        public uint SlotRamRequired
+        {
+            get
+            {
+                return (uint)Resources.Sum(x => x.SlotRamRequired);
+            }
+        }
+
+        public uint SlotVRamRequired
+        {
+            get
+            {
+                return (uint)Resources.Sum(x => x.SlotVRamRequired);
+            }
+        }
+
+        public uint OtherRamRequired
+        {
+            get
+            {
+                return (uint)Resources.Sum(x => x.OtherRamRequired);
+            }
+        }
+
+        public uint OtherVRamRequired
+        {
+            get
+            {
+                return (uint)Resources.Sum(x => x.OtherVRamRequired);
+            }
+        }
+
         public SdsFile(string sdsPath)
         {
             Header = new SdsHeader(sdsPath);
