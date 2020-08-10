@@ -1,4 +1,4 @@
-# THIS LIBRARY IS IN REFACTORING STATE, SO IT'S USELESS RIGHT NOW. DON'T USE IT!
+# THIS LIBRARY IS IN REFACTORING STATE, SO IT'S USELESS RIGHT NOW. SWITCH TO THE BRANCH <a href="https://github.com/Mettak/sdslib/tree/before_refactoring">'before_refactoring'</a> WHERE IS LAST FUNCTIONAL VERSION.
 
 # sdslib
 <b>sdslib</b> is small DLL library written in C# with whose help you can manage SDS files. This library gives you ability to create .NET applications for modding <a href="https://en.wikipedia.org/wiki/Mafia_II" target=_blank><b>Mafia II</b></a>. Development of this library requires reverse engineering.
