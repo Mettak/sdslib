@@ -1,9 +1,12 @@
-﻿using sdslib.Models;
+﻿using Newtonsoft.Json;
+using sdslib.Enums;
+using sdslib.ResourceTypes;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Xml;
 using zlib;
 
@@ -18,8 +21,7 @@ namespace sdslib
 
         public SdsHeader Header { get; set; }
 
-        public string Path { get; }
-
+        [JsonIgnore]
         public uint SlotRamRequired
         {
             get
@@ -28,6 +30,7 @@ namespace sdslib
             }
         }
 
+        [JsonIgnore]
         public uint SlotVRamRequired
         {
             get
@@ -36,6 +39,7 @@ namespace sdslib
             }
         }
 
+        [JsonIgnore]
         public uint OtherRamRequired
         {
             get
@@ -44,6 +48,7 @@ namespace sdslib
             }
         }
 
+        [JsonIgnore]
         public uint OtherVRamRequired
         {
             get
@@ -55,10 +60,9 @@ namespace sdslib
         public SdsFile(string sdsPath)
         {
             Header = new SdsHeader(sdsPath);
-            Path = sdsPath;
 
             MemoryStream decompressedData;
-            using (FileStream fileStream = new FileStream(Path, FileMode.Open, FileAccess.Read))
+            using (FileStream fileStream = new FileStream(sdsPath, FileMode.Open, FileAccess.Read))
             {
                 fileStream.Seek(Header.BlockTableOffset, SeekOrigin.Begin);
 
@@ -129,37 +133,57 @@ namespace sdslib
                             {
                                 resourceInfo.SourceDataDescription = xmlReader.ReadElementContentAsString();
 
-                                Resource resource = new Resource
-                                {
-                                    Info = resourceInfo
-                                };
-
                                 uint resId = decompressedData.ReadUInt32();
-                                if (resId != resource.Info.Type.Id)
+                                if (resId != resourceInfo.Type.Id)
                                 {
                                     throw new InvalidDataException();
                                 }
 
                                 uint size = decompressedData.ReadUInt32();
-                                resource.Version = decompressedData.ReadUInt16();
-                                resource.SlotRamRequired = decompressedData.ReadUInt32();
-                                resource.SlotVRamRequired = decompressedData.ReadUInt32();
-                                resource.OtherRamRequired = decompressedData.ReadUInt32();
-                                resource.OtherVRamRequired = decompressedData.ReadUInt32();
+                                ushort version = decompressedData.ReadUInt16();
+                                uint slotRamRequired = decompressedData.ReadUInt32();
+                                uint slotVRamRequired = decompressedData.ReadUInt32();
+                                uint otherRamRequired = decompressedData.ReadUInt32();
+                                uint otherVRamRequired = decompressedData.ReadUInt32();
                                 uint checksum = decompressedData.ReadUInt32();
-                                resource.Data = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
+                                byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
 
-                                if (checksum != resource.Checksum || size != resource.Size)
+                                switch(resourceInfo.Type.Name)
                                 {
-                                    throw new InvalidDataException();
-                                }
+                                    case EResourceType.Texture:
+                                        Resources.Add(new ResourceTypes.Texture(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                        break;
 
-                                Resources.Add(resource);
+                                    case EResourceType.Mipmap:
+                                        Resources.Add(new ResourceTypes.MipMap(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                        break;
+
+                                    default:
+                                        Resources.Add(new Resource(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                        break;
+                                }
                             }
                         }
                     }
                 }
+
+                decompressedData.Close();
             }
+        }
+
+        public void ExportToFile(string path)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ExportToDirectory(string path)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static SdsFile ImportFromDirectory(string path)
+        {
+            throw new NotImplementedException();
         }
 
         //public void Save()

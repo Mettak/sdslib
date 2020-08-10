@@ -1,17 +1,19 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace sdslib.Models
+namespace sdslib.ResourceTypes
 {
     public class Resource
     {
         public ResourceInfo Info { get; set; }
 
-        public uint Size
+        [JsonIgnore]
+        public virtual uint Size
         {
             get
             {
@@ -29,6 +31,7 @@ namespace sdslib.Models
 
         public uint OtherVRamRequired { get; set; }
 
+        [JsonIgnore]
         public uint Checksum
         {
             get
@@ -45,7 +48,24 @@ namespace sdslib.Models
             }
         }
 
+        [JsonIgnore]
         public byte[] Data { get; set; }
+
+        public Resource(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
+        {
+            Info = resourceInfo;
+            Version = version;
+            SlotRamRequired = slotRamRequired;
+            SlotVRamRequired = slotVRamRequired;
+            OtherRamRequired = otherRamRequired;
+            OtherVRamRequired = otherVRamRequired;
+            Data = rawData;
+        }
+
+        public virtual byte[] GetRawData()
+        {
+            return Data;
+        }
 
         public virtual void Extract(string destination)
         {
@@ -55,6 +75,16 @@ namespace sdslib.Models
             }
 
             System.IO.File.WriteAllBytes(destination, Data);
+        }
+
+        public virtual void ReplaceData(string path)
+        {
+            if (!System.IO.File.Exists(path))
+            {
+                throw new FileNotFoundException();
+            }
+
+            Data = System.IO.File.ReadAllBytes(path);
         }
     }
 }

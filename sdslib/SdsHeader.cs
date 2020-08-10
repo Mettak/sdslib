@@ -1,4 +1,6 @@
-﻿using sdslib.Models;
+﻿using Newtonsoft.Json;
+using sdslib.Enums;
+using sdslib.ResourceTypes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,10 +17,13 @@ namespace sdslib
 
         public EPlatform Platform { get; set; }
 
+        [JsonIgnore]
         public uint ResourceTypeTableOffset { get; set; }
 
+        [JsonIgnore]
         public uint BlockTableOffset { get; set; }
 
+        [JsonIgnore]
         public uint XmlOffset { get; set; }
 
         public EGameVersion GameVersion { get; set; }

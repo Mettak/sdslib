@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace sdslib.Models
+namespace sdslib.ResourceTypes
 {
     public class ResourceInfo
     {
@@ -12,6 +13,7 @@ namespace sdslib.Models
 
         public string ResourceGuid { get; set; }
 
+        [JsonIgnore]
         public string Name
         {
             get

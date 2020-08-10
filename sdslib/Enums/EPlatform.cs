@@ -1,4 +1,4 @@
-﻿namespace sdslib.Models
+﻿namespace sdslib.Enums
 {
     public enum EPlatform
     {
