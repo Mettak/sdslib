@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -101,6 +102,44 @@ namespace sdslib
         public static void WriteUInt64(this Stream stream, ulong uint64)
         {
             stream.Write(BitConverter.GetBytes(uint64), 0, Constants.DataTypesSizes.UInt64);
+        }
+
+        public static string ReadStringDynamic(this Stream stream, Encoding encoding, char end)
+        {
+            int characterSize = encoding.GetByteCount("e");
+            string characterEnd = end.ToString(CultureInfo.InvariantCulture);
+
+            int i = 0;
+            var data = new byte[128 * characterSize];
+
+            while (true)
+            {
+                if (i + characterSize > data.Length)
+                {
+                    Array.Resize(ref data, data.Length + (128 * characterSize));
+                }
+                
+                stream.Read(data, i, characterSize);
+
+                if (encoding.GetString(data, i, characterSize) == characterEnd)
+                {
+                    break;
+                }
+
+                i += characterSize;
+            }
+
+            if (i == 0)
+            {
+                return string.Empty;
+            }
+
+            return encoding.GetString(data, 0, i);
+        }
+
+        public static string ReadStringDynamic(this Stream stream)
+        {
+            return stream.ReadStringDynamic(Encoding.UTF8, '\0');
         }
     }
 }

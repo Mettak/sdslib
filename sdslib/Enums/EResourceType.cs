@@ -20,6 +20,9 @@
         Script,
         Sound,
         Texture,
-        VertexBufferPool
+        VertexBufferPool,
+        XML,
+        SoundTable,
+        Table
     }
 }

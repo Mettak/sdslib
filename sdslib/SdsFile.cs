@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Xml;
@@ -54,6 +55,31 @@ namespace sdslib
             get
             {
                 return (uint)Resources.Sum(x => x.OtherVRamRequired);
+            }
+        }
+
+        [JsonIgnore]
+        public string XmlString
+        {
+            get
+            {
+                string xmlFile = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<xml>\n";
+
+                foreach (var resource in Resources)
+                {
+                    xmlFile += "\t<ResourceInfo>\n\t\t<CustomDebugInfo/>\n\t\t";
+                    xmlFile += "<TypeName>" + resource.Info.Type.DisplayName + "</TypeName>\n\t\t";
+                    xmlFile += "<SourceDataDescription>" + resource.Info.SourceDataDescription + "</SourceDataDescription>\n\t\t";
+                    xmlFile += "<SlotRamRequired __type='Int'>" + resource.SlotRamRequired + "</SlotRamRequired>\n\t\t";
+                    xmlFile += "<SlotVramRequired __type='Int'>" + resource.SlotVRamRequired + "</SlotVramRequired>\n\t\t";
+                    xmlFile += "<OtherRamRequired __type='Int'>" + resource.OtherRamRequired + "</OtherRamRequired>\n\t\t";
+                    xmlFile += "<OtherVramRequired __type='Int'>" + resource.OtherVRamRequired + "</OtherVramRequired>\n\t";
+                    xmlFile += "</ResourceInfo>\n";
+                }
+
+                xmlFile += "</xml>\n";
+
+                return xmlFile.Replace("\n", Environment.NewLine);
             }
         }
 
@@ -173,7 +199,127 @@ namespace sdslib
 
         public void ExportToFile(string path)
         {
-            throw new NotImplementedException();
+            using (FileStream sds = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
+            {
+                long currentPosition;
+                long blockTableOffsetPosition;
+                long xmlOffsetPosition;
+                long headerChecksumPosition;
+
+                sds.WriteString("SDS", Constants.DataTypesSizes.UInt32);
+                sds.WriteUInt32(Header.Version);
+                sds.WriteString(Header.Platform.ToString(), Constants.DataTypesSizes.UInt32);
+                byte[] hash1 = new byte[3 * Constants.DataTypesSizes.UInt32];
+                Array.Copy(Encoding.UTF8.GetBytes("SDS\0"), 0, hash1, 0, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(Header.Version), 0, hash1, 4, Constants.DataTypesSizes.UInt32);
+                Array.Copy(Encoding.UTF8.GetBytes(Header.Platform.ToString()), 0, hash1, 8, Header.Platform.ToString().Length);
+                sds.WriteUInt32(FNV.Hash32(hash1));
+
+                Header.ResourceTypeTableOffset = 72;
+                sds.WriteUInt32(Header.ResourceTypeTableOffset);
+                blockTableOffsetPosition = sds.Position;
+                sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+                xmlOffsetPosition = sds.Position;
+                sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+
+                sds.WriteUInt32(SlotRamRequired);
+                sds.WriteUInt32(SlotVRamRequired);
+                sds.WriteUInt32(OtherRamRequired);
+                sds.WriteUInt32(OtherVRamRequired);
+
+                sds.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
+                sds.WriteUInt64((ulong)Header.GameVersion);
+
+                sds.Seek(Constants.DataTypesSizes.UInt64, SeekOrigin.Current);
+                sds.WriteUInt32((uint)Resources.Count);
+
+                headerChecksumPosition = sds.Position;
+                sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+
+                sds.WriteUInt32((uint)Header.ResourceTypes.Count);
+                foreach (ResourceType resourceType in Header.ResourceTypes)
+                {
+                    sds.WriteUInt32(resourceType.Id);
+                    sds.WriteUInt32((uint)resourceType.DisplayName.Length);
+                    sds.WriteString(resourceType.DisplayName);
+                    sds.WriteUInt32(resourceType.Unknown32);
+                }
+
+                currentPosition = sds.Position;
+                Header.BlockTableOffset = (uint)currentPosition;
+                sds.Seek(blockTableOffsetPosition, SeekOrigin.Begin);
+                sds.WriteUInt32((uint)currentPosition);
+                sds.Seek(currentPosition, SeekOrigin.Begin);
+
+                sds.WriteUInt32(1819952469U);
+                sds.WriteUInt32(Constants.SdsHeader.BlockSize);
+                sds.WriteUInt8(4);
+
+                bool first = true;
+                foreach (MemoryStream block in MergeDataIntoBlocks())
+                {
+                    block.SeekToStart();
+
+                    if (first || block.Length >= 10240)
+                    {
+                        byte[] blockData = block.ReadAllBytes();
+                        MemoryStream compressedBlock = new MemoryStream();
+                        ZOutputStream compressStream = new ZOutputStream(compressedBlock,
+                            zlibConst.Z_BEST_COMPRESSION);
+                        compressStream.Write(blockData, 0, blockData.Length);
+                        compressStream.finish();
+
+                        sds.WriteUInt32((uint)compressStream.TotalOut + 32U);
+                        sds.WriteUInt8((byte)EDataBlockType.Compressed);
+                        sds.WriteUInt32((uint)block.Length);
+
+                        sds.WriteUInt32(32);
+                        sds.WriteUInt32(81920);
+                        sds.WriteUInt32(135200769);
+
+                        sds.WriteUInt32((uint)compressStream.TotalOut);
+                        sds.WriteUInt64(0);
+                        sds.WriteUInt32(0);
+
+                        compressedBlock.SeekToStart();
+                        sds.Write(compressedBlock.ReadAllBytes());
+                    }
+
+                    else
+                    {
+                        sds.WriteUInt32((uint)block.Length);
+                        sds.WriteUInt8((byte)EDataBlockType.Uncompressed);
+                        sds.Write(block.ReadAllBytes());
+                    }
+
+                    first = false;
+                }
+
+                sds.WriteUInt32(0);
+                sds.WriteUInt8(0);
+
+                currentPosition = sds.Position;
+                Header.XmlOffset = (uint)currentPosition;
+                sds.Seek(xmlOffsetPosition, SeekOrigin.Begin);
+                sds.WriteUInt32((uint)currentPosition);
+                sds.Seek(headerChecksumPosition, SeekOrigin.Begin);
+
+                byte[] hash2 = new byte[52];
+                Array.Copy(BitConverter.GetBytes(Header.ResourceTypeTableOffset), 0, hash2, 0, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(Header.BlockTableOffset), 0, hash2, 4, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(Header.XmlOffset), 0, hash2, 8, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(SlotRamRequired), 0, hash2, 12, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(SlotVRamRequired), 0, hash2, 16, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(OtherRamRequired), 0, hash2, 20, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(OtherVRamRequired), 0, hash2, 24, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown32_2C), 0, hash2, 28, Constants.DataTypesSizes.UInt32);
+                Array.Copy(BitConverter.GetBytes((ulong)Header.GameVersion), 0, hash2, 32, Constants.DataTypesSizes.UInt64);
+                Array.Copy(BitConverter.GetBytes(Resources.Count), 0, hash2, 48, Constants.DataTypesSizes.UInt32);
+                sds.WriteUInt32(FNV.Hash32(hash2));
+                
+                sds.Seek(currentPosition, SeekOrigin.Begin);
+                sds.WriteString(XmlString);
+            }
         }
 
         public void ExportToDirectory(string path)
@@ -186,177 +332,43 @@ namespace sdslib
             throw new NotImplementedException();
         }
 
-        //public void Save()
-        //{
-        //    Save(Path);
-        //}
+        private List<MemoryStream> MergeDataIntoBlocks()
+        {
+            MemoryStream mergedData = new MemoryStream();
+            foreach (var resource in Resources)
+            {
+                mergedData.WriteUInt32(resource.Info.Type.Id);
+                mergedData.WriteUInt32(resource.Size);
+                mergedData.WriteUInt16(resource.Version);
+                mergedData.WriteUInt32(resource.SlotRamRequired);
+                mergedData.WriteUInt32(resource.SlotVRamRequired);
+                mergedData.WriteUInt32(resource.OtherRamRequired);
+                mergedData.WriteUInt32(resource.OtherVRamRequired);
+                mergedData.WriteUInt32(resource.Checksum);
+                mergedData.Write(resource.GetRawData());
+            }
 
-        //public void Save(string destinationPath)
-        //{
-        //    if (Files == null)
-        //        throw new Exception("No files in the SDS file.");
+            mergedData.SeekToStart();
 
-        //    using (FileStream sds = new FileStream(destinationPath, FileMode.Create, FileAccess.ReadWrite))
-        //    {
-        //        SlotRamRequired = 0U;
-        //        SlotVRamRequired = 0U;
-        //        OtherRamRequired = 0U;
-        //        OtherVRamRequired = 0U;
-        //        foreach (var File in Files)
-        //        {
-        //            SlotRamRequired += File.GetSlotRamRequired();
-        //            SlotVRamRequired += File.GetSlotVRamRequired();
-        //            OtherRamRequired += File.GetOtherRamRequired();
-        //            OtherVRamRequired +=File.GetOtherVRamRequired();
-        //        }
+            int numberOfBlocks = (int)mergedData.Length / Constants.SdsHeader.BlockSize;
+            List<MemoryStream> dataBlocks = new List<MemoryStream>();
+            for (int i = 0; i < numberOfBlocks; i++)
+            {
+                MemoryStream dataBlock = new MemoryStream();
+                dataBlock.Write(mergedData.ReadBytes(Constants.SdsHeader.BlockSize));
+                dataBlocks.Add(dataBlock);
+            }
 
-        //        sds.WriteString("SDS", Constants.DataTypesSizes.UInt32);
-        //        sds.WriteUInt32(Version);
-        //        sds.WriteString(Platform.ToString(), Constants.DataTypesSizes.UInt32);
-        //        sds.WriteUInt32(Constants.SdsHeader.Unknown32_C);
-        //        sds.WriteUInt32(ResourceTypeTableOffset);
-        //        sds.WriteUInt32(BlockTableOffset);
-        //        sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
-        //        sds.WriteUInt32(SlotRamRequired);
-        //        sds.WriteUInt32(SlotVRamRequired);
-        //        sds.WriteUInt32(OtherRamRequired);
-        //        sds.WriteUInt32(OtherVRamRequired);
-        //        sds.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
-        //        sds.WriteUInt64((ulong)GameVersion);
-        //        sds.WriteUInt64(Constants.SdsHeader.Uknown64_38);
-        //        sds.WriteUInt32(NumberOfFiles);
-        //        sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+            if (mergedData.Position != mergedData.Length)
+            {
+                MemoryStream dataBlock = new MemoryStream();
+                dataBlock.Write(mergedData.ReadBytes((int)mergedData.Length - (int)mergedData.Position));
+                dataBlocks.Add(dataBlock);
+            }
 
-        //        sds.WriteUInt32((uint)ResourceTypeNames.Count);
-        //        for (int i = 0; i < ResourceTypeNames.Count; i++)
-        //        {
-        //            sds.WriteUInt32((uint)i);
-        //            sds.WriteUInt32((uint)ResourceTypeNames[i].Length);
-        //            sds.WriteString(ResourceTypeNames[i], ResourceTypeNames[i].Length);
-
-        //            if (ResourceTypeNames[i] == "IndexBufferPool" || 
-        //                ResourceTypeNames[i] == "PREFAB")
-        //                sds.Write(new byte[] { 0x03, 0x00, 0x00, 0x00 });
-
-        //            else if (ResourceTypeNames[i] == "VertexBufferPool")
-        //                sds.Write(new byte[] { 0x02, 0x00, 0x00, 0x00 });
-
-        //            else
-        //                sds.Write(new byte[] { 0x00, 0x00, 0x00, 0x00 });
-        //        }
-
-        //        sds.Write(new byte[] { 0x55, 0x45, 0x7A, 0x6C, 0x00, 0x40, 0x00, 0x00, 0x04 });
-        //        int index = 0;
-        //        foreach (MemoryStream block in MergeDataIntoBlocks())
-        //        {
-        //            block.SeekToStart();
-
-        //            if (block.Length >= 10240 || index == 0)
-        //            {
-        //                byte[] blockData = block.ReadAllBytes();
-        //                MemoryStream compressedBlock = new MemoryStream();
-        //                ZOutputStream compressStream = new ZOutputStream(compressedBlock, 
-        //                    zlibConst.Z_BEST_COMPRESSION);
-        //                compressStream.Write(blockData, 0, blockData.Length);
-        //                compressStream.finish();
-        //                sds.WriteUInt32((uint)compressStream.TotalOut + 32U);
-        //                sds.WriteUInt8(1);
-        //                sds.WriteUInt32((uint)block.Length);
-        //                sds.Write(new byte[] { 0x20, 0x00, 0x00, 0x00, 0x00,
-        //                    0x40, 0x01, 0x00, 0x01, 0x00, 0x0F, 0x08 });
-        //                sds.WriteUInt32((uint)compressStream.TotalOut);
-        //                sds.Write(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00,
-        //                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
-        //                compressedBlock.SeekToStart();
-        //                sds.Write(compressedBlock.ReadAllBytes());
-        //            }
-
-        //            else
-        //            {
-        //                sds.WriteUInt32((uint)block.Length);
-        //                sds.WriteUInt8(0);
-        //                sds.Write(block.ReadAllBytes());
-        //            }
-
-        //            index++;
-        //        }
-
-        //        sds.Write(new byte[] { 0x0, 0x0, 0x0, 0x0, 0x0 });
-
-        //        XmlOffset = (uint)sds.Position;
-        //        sds.Seek(24, SeekOrigin.Begin);
-        //        sds.WriteUInt32(XmlOffset);
-
-        //        sds.Seek(68U, SeekOrigin.Begin);
-        //        sds.WriteUInt32(Checksum);
-
-        //        sds.Seek(XmlOffset, SeekOrigin.Begin);
-
-        //        sds.WriteString(CreateXMLString());
-        //    }
-
-        //    string CreateXMLString()
-        //    {
-        //        string xmlFile = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<xml>\n";
-
-        //        foreach (var File in Files)
-        //        {
-        //            xmlFile += "\t<ResourceInfo>\n\t\t<CustomDebugInfo/>\n\t\t";
-        //            xmlFile += "<TypeName>" + GetResourceTypeNameByID(File.GetTypeID()) + "</TypeName>\n\t\t";
-        //            xmlFile += "<SourceDataDescription>" + File.GetSourcePath() + "</SourceDataDescription>\n\t\t";
-        //            xmlFile += "<SlotRamRequired __type='Int'>" + File.GetSlotRamRequired() + "</SlotRamRequired>\n\t\t";
-        //            xmlFile += "<SlotVramRequired __type='Int'>" + File.GetSlotVRamRequired() + "</SlotVramRequired>\n\t\t";
-        //            xmlFile += "<OtherRamRequired __type='Int'>" + File.GetOtherRamRequired() + "</OtherRamRequired>\n\t\t";
-        //            xmlFile += "<OtherVramRequired __type='Int'>" + File.GetOtherVRamRequired() + "</OtherVramRequired>\n\t";
-        //            xmlFile += "</ResourceInfo>\n";
-        //        }
-
-        //        xmlFile += "</xml>\n";
-
-        //        return xmlFile.Replace("\n", Environment.NewLine);
-        //    }
-
-        //    List<MemoryStream> MergeDataIntoBlocks()
-        //    {
-        //        if (Files == null)
-        //            throw new Exception("");
-
-        //        MemoryStream mergedData = new MemoryStream();
-        //        foreach (var file in Files)
-        //        {
-        //            mergedData.WriteUInt32(file.GetTypeID());
-        //            mergedData.WriteUInt32(file.GetFileSize());
-        //            mergedData.WriteUInt16(file.GetVersion());
-        //            mergedData.WriteUInt32(file.GetSlotRamRequired());
-        //            mergedData.WriteUInt32(file.GetSlotVRamRequired());
-        //            mergedData.WriteUInt32(file.GetOtherRamRequired());
-        //            mergedData.WriteUInt32(file.GetOtherVRamRequired());
-        //            mergedData.WriteUInt32(file.GetChecksum());
-        //            mergedData.Write(file.GetData());
-        //        }
-
-        //        mergedData.SeekToStart();
-
-        //        int numberOfBlocks = (int)mergedData.Length / Constants.SdsHeader.BlockSize;
-        //        List<MemoryStream> dataBlocks = new List<MemoryStream>();
-        //        for (int i = 0; i < numberOfBlocks; i++)
-        //        {
-        //            MemoryStream dataBlock = new MemoryStream();
-        //            dataBlock.Write(mergedData.ReadBytes(Constants.SdsHeader.BlockSize));
-        //            dataBlocks.Add(dataBlock);
-        //        }
-
-        //        if (mergedData.Position != mergedData.Length)
-        //        {
-        //            MemoryStream dataBlock = new MemoryStream();
-        //            dataBlock.Write(mergedData.ReadBytes((int)mergedData.Length - (int)mergedData.Position));
-        //            dataBlocks.Add(dataBlock);
-        //        }
-
-        //        mergedData.Close();
-        //        return dataBlocks;
-        //    }
-        //}
+            mergedData.Close();
+            return dataBlocks;
+        }
 
         //public void ExtractAllFiles(string path)
         //{
