@@ -1,5 +1,3 @@
-# THIS LIBRARY IS IN REFACTORING STATE, SO IT'S USELESS RIGHT NOW. SWITCH TO THE BRANCH <a href="https://github.com/Mettak/sdslib/tree/before_refactoring">'before_refactoring'</a> WHERE IS LAST FUNCTIONAL VERSION.
-
 # sdslib
 <b>sdslib</b> is small DLL library written in C# with whose help you can manage SDS files. This library gives you ability to create .NET applications for modding <a href="https://en.wikipedia.org/wiki/Mafia_II" target=_blank><b>Mafia II</b></a>. Development of this library requires reverse engineering.
 
@@ -14,28 +12,28 @@ SDS data format is used by video-games (Mafia II and Mafia III); contains compre
 * Uses <a href="https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function" target=_blank><i>FNV hash</i></a> function for checksums
 * Tables and DLC's content are encrypted with <a href="https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm" target=_blank><i>TEA</i></a> (not implemented in this library)
 
-## <s>Usage</s>
+## Usage
 ```c#
 /* Init of SDS file */
-SdsFile sds = new SdsFile(@"...Mafia II\pc\sds\mapa\mapa_city.sds");
-
-/* Extracts all files from SDS into selected directory */
-sds.ExtractAllFiles(@"C:\Users\Mettak\Desktop\mapa_city");
-
-/* Extracts single file to the selected path */
-sds.ExtractFileByName("map.dds", @"C:\Users\Mettak\Desktop\map.dds");
-
-/* Extracts all textures from current SDS (if contains any) */
-sds.ExtractFilesByTypeName(typeof(Texture), @"C:\Users\Mettak\Desktop\tex");
-
-/* Replace file */
-sds.ReplaceFileByName("map.dds", @"C:\Users\Mettak\Desktop\modified_map.dds");
-
-/* Saves modified SDS file */
-sds.Save();
-
-/* Saves modified SDS file to the selected path */
-sds.Save(@"C:\Users\Mettak\Desktop\modified.sds");
+using (SdsFile sdsFile = SdsFile.FromFile(@"E:\Games\Steam\steamapps\common\Mafia II Definitive Edition\pc\sds\mapa\mapa_city.sds"))
+{
+    /* Extracts all resources from SDS into selected directory*/
+    sdsFile.ExportToDirectory(@"C:\Users\Mettak\Desktop");
+    
+    /* Extracts single resource to the selected path */
+    Texture texture = sdsFile.GetResourceByTypeAndName<Texture>("map.dds");
+    texture.Extract(@"C:\Users\Mettak\Desktop\map.dds");
+    
+    /* Extracts all textures from current SDS (if contains any) */
+    sdsFile.ExtractResourcesByType<Texture>(@"C:\Users\Mettak\Desktop\mapa_city\textures");
+    
+    /* Replaces data of the selected file */
+    MipMap mipMap = sdsFile.GetResourceByTypeAndName<MipMap>("map.dds");
+    mipMap.ReplaceData(@"C:\Users\Mettak\Desktop\new_map.dds");
+    
+    /* Saves modified SDS file to the selected path */
+    sdsFile.ExportToFile(@"C:\Users\Mettak\Desktop\modified.sds");
+}
 ```
 
 ## Notice
