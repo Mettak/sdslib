@@ -10,7 +10,23 @@ namespace sdslib.ResourceTypes
 {
     public class Resource
     {
-        public ResourceInfo Info { get; set; }
+        public string Guid { get; set; }
+
+        public ResourceInfo Info { get; set; } = new ResourceInfo();
+
+        [JsonIgnore]
+        public string Name
+        {
+            get
+            {
+                if (Info.SourceDataDescription == "not available")
+                {
+                    return Guid;
+                }
+
+                return Info.SourceDataDescription;
+            }
+        }
 
         [JsonIgnore]
         public virtual uint Size
@@ -51,8 +67,12 @@ namespace sdslib.ResourceTypes
         [JsonIgnore]
         public byte[] Data { get; set; }
 
+        [JsonConstructor]
+        public Resource() { }
+
         public Resource(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
         {
+            Guid = System.Guid.NewGuid().ToString();
             Info = resourceInfo;
             Version = version;
             SlotRamRequired = slotRamRequired;

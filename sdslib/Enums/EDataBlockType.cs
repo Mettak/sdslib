@@ -1,8 +1,8 @@
 ﻿namespace sdslib.Enums
 {
-    public enum EDataBlockType : uint
+    public enum EDataBlockType : byte
     {
-        Uncompressed = 0U,
-        Compressed = 1U
+        Uncompressed = 0,
+        Compressed = 1
     }
 }

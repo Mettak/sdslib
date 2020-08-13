@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,7 @@ namespace sdslib.ResourceTypes
             }
         }
 
+        [JsonIgnore]
         public ulong NameHash
         {
             get
@@ -25,6 +27,8 @@ namespace sdslib.ResourceTypes
         }
 
         public byte Unknown8 { get; set; }
+
+        public MipMap() { }
 
         public MipMap(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
             : base(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData)

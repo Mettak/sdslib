@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using sdslib.Enums;
 using sdslib.ResourceTypes;
 using System;
@@ -13,14 +14,11 @@ using zlib;
 
 namespace sdslib
 {
-    /// <summary>
-    /// Provides functions for extracting or replacing files in SDS file (version 19).
-    /// </summary>
-    public class SdsFile
+    public class SdsFile : IDisposable
     {
         public List<Resource> Resources { get; set; } = new List<Resource>();
 
-        public SdsHeader Header { get; set; }
+        public SdsHeader Header { get; set; } = new SdsHeader();
 
         [JsonIgnore]
         public uint SlotRamRequired
@@ -83,118 +81,123 @@ namespace sdslib
             }
         }
 
-        public SdsFile(string sdsPath)
-        {
-            Header = new SdsHeader(sdsPath);
+        public string Path { get; set; }
 
-            MemoryStream decompressedData;
+        public static SdsFile FromFile(string sdsPath)
+        {
+            SdsFile file = new SdsFile();
+            file.Path = sdsPath;
+            file.Header = SdsHeader.FromFile(sdsPath);
+
             using (FileStream fileStream = new FileStream(sdsPath, FileMode.Open, FileAccess.Read))
             {
-                fileStream.Seek(Header.BlockTableOffset, SeekOrigin.Begin);
+                fileStream.Seek(file.Header.BlockTableOffset, SeekOrigin.Begin);
 
                 if (fileStream.ReadUInt32() != 1819952469U)
                     throw new Exception("Invalid SDS file!");
 
                 fileStream.Seek(5, SeekOrigin.Current);
 
-                decompressedData = new MemoryStream();
-                while (true)
+                using (MemoryStream decompressedData = new MemoryStream())
                 {
-                    uint blockSize = fileStream.ReadUInt32();
-                    EDataBlockType blockType = (EDataBlockType)fileStream.ReadUInt8();
-
-                    if (blockSize == 0U)
-                        break;
-
-                    if (blockType == EDataBlockType.Compressed)
+                    while (true)
                     {
-                        fileStream.Seek(16, SeekOrigin.Current);
-                        uint compressedBlockSize = fileStream.ReadUInt32();
+                        uint blockSize = fileStream.ReadUInt32();
+                        EDataBlockType blockType = (EDataBlockType)fileStream.ReadUInt8();
 
-                        if (blockSize - 32U != compressedBlockSize)
-                            throw new Exception("Invalid block!");
+                        if (blockSize == 0U)
+                            break;
 
-                        fileStream.Seek(12, SeekOrigin.Current);
-                        byte[] compressedBlock = new byte[compressedBlockSize];
-                        fileStream.Read(compressedBlock, 0, compressedBlock.Length);
-
-                        ZOutputStream decompressStream = new ZOutputStream(decompressedData);
-                        decompressStream.Write(compressedBlock, 0, compressedBlock.Length);
-                        decompressStream.finish();
-                    }
-
-                    else if (blockType == EDataBlockType.Uncompressed)
-                    {
-                        byte[] decompressedBlock = new byte[blockSize];
-                        fileStream.Read(decompressedBlock, 0, decompressedBlock.Length);
-                        decompressedData.Write(decompressedBlock, 0, decompressedBlock.Length);
-                    }
-
-                    else
-                    {
-                        throw new Exception("Invalid block type!");
-                    }
-                }
-
-                decompressedData.SeekToStart();
-
-                fileStream.Seek(Header.XmlOffset, SeekOrigin.Begin);
-                byte[] xmlBytes = fileStream.ReadBytes((int)fileStream.Length - (int)fileStream.Position);
-                using (MemoryStream memoryStream = new MemoryStream(xmlBytes))
-                using (XmlReader xmlReader = XmlReader.Create(memoryStream))
-                {
-                    ResourceInfo resourceInfo = new ResourceInfo();
-                    while (xmlReader.Read())
-                    {
-                        if (xmlReader.NodeType == XmlNodeType.Element)
+                        if (blockType == EDataBlockType.Compressed)
                         {
-                            if (xmlReader.Name == "TypeName")
-                            {
-                                resourceInfo = new ResourceInfo();
-                                var resourceType = (EResourceType)Enum.Parse(typeof(EResourceType), xmlReader.ReadElementContentAsString());
-                                resourceInfo.Type = Header.ResourceTypes.First(x => x.Name == resourceType);
-                            }
+                            fileStream.Seek(16, SeekOrigin.Current);
+                            uint compressedBlockSize = fileStream.ReadUInt32();
 
-                            else if (xmlReader.Name == "SourceDataDescription")
-                            {
-                                resourceInfo.SourceDataDescription = xmlReader.ReadElementContentAsString();
+                            if (blockSize - 32U != compressedBlockSize)
+                                throw new Exception("Invalid block!");
 
-                                uint resId = decompressedData.ReadUInt32();
-                                if (resId != resourceInfo.Type.Id)
+                            fileStream.Seek(12, SeekOrigin.Current);
+                            byte[] compressedBlock = new byte[compressedBlockSize];
+                            fileStream.Read(compressedBlock, 0, compressedBlock.Length);
+
+                            ZOutputStream decompressStream = new ZOutputStream(decompressedData);
+                            decompressStream.Write(compressedBlock, 0, compressedBlock.Length);
+                            decompressStream.finish();
+                        }
+
+                        else if (blockType == EDataBlockType.Uncompressed)
+                        {
+                            byte[] decompressedBlock = new byte[blockSize];
+                            fileStream.Read(decompressedBlock, 0, decompressedBlock.Length);
+                            decompressedData.Write(decompressedBlock, 0, decompressedBlock.Length);
+                        }
+
+                        else
+                        {
+                            throw new Exception("Invalid block type!");
+                        }
+                    }
+
+                    decompressedData.SeekToStart();
+
+                    fileStream.Seek(file.Header.XmlOffset, SeekOrigin.Begin);
+                    byte[] xmlBytes = fileStream.ReadBytes((int)fileStream.Length - (int)fileStream.Position);
+                    using (MemoryStream memoryStream = new MemoryStream(xmlBytes))
+                    using (XmlReader xmlReader = XmlReader.Create(memoryStream))
+                    {
+                        ResourceInfo resourceInfo = new ResourceInfo();
+                        while (xmlReader.Read())
+                        {
+                            if (xmlReader.NodeType == XmlNodeType.Element)
+                            {
+                                if (xmlReader.Name == "TypeName")
                                 {
-                                    throw new InvalidDataException();
+                                    resourceInfo = new ResourceInfo();
+                                    var resourceType = (EResourceType)Enum.Parse(typeof(EResourceType), xmlReader.ReadElementContentAsString());
+                                    resourceInfo.Type = file.Header.ResourceTypes.First(x => x.Name == resourceType);
                                 }
 
-                                uint size = decompressedData.ReadUInt32();
-                                ushort version = decompressedData.ReadUInt16();
-                                uint slotRamRequired = decompressedData.ReadUInt32();
-                                uint slotVRamRequired = decompressedData.ReadUInt32();
-                                uint otherRamRequired = decompressedData.ReadUInt32();
-                                uint otherVRamRequired = decompressedData.ReadUInt32();
-                                uint checksum = decompressedData.ReadUInt32();
-                                byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
-
-                                switch(resourceInfo.Type.Name)
+                                else if (xmlReader.Name == "SourceDataDescription")
                                 {
-                                    case EResourceType.Texture:
-                                        Resources.Add(new ResourceTypes.Texture(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                        break;
+                                    resourceInfo.SourceDataDescription = xmlReader.ReadElementContentAsString();
 
-                                    case EResourceType.Mipmap:
-                                        Resources.Add(new ResourceTypes.MipMap(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                        break;
+                                    uint resId = decompressedData.ReadUInt32();
+                                    if (resId != resourceInfo.Type.Id)
+                                    {
+                                        throw new InvalidDataException();
+                                    }
 
-                                    default:
-                                        Resources.Add(new Resource(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                        break;
+                                    uint size = decompressedData.ReadUInt32();
+                                    ushort version = decompressedData.ReadUInt16();
+                                    uint slotRamRequired = decompressedData.ReadUInt32();
+                                    uint slotVRamRequired = decompressedData.ReadUInt32();
+                                    uint otherRamRequired = decompressedData.ReadUInt32();
+                                    uint otherVRamRequired = decompressedData.ReadUInt32();
+                                    uint checksum = decompressedData.ReadUInt32();
+                                    byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
+
+                                    switch (resourceInfo.Type.Name)
+                                    {
+                                        case EResourceType.Texture:
+                                            file.Resources.Add(new ResourceTypes.Texture(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            break;
+
+                                        case EResourceType.Mipmap:
+                                            file.Resources.Add(new ResourceTypes.MipMap(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            break;
+
+                                        default:
+                                            file.Resources.Add(new Resource(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            break;
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
-                decompressedData.Close();
             }
+
+            return file;
         }
 
         public void ExportToFile(string path)
@@ -209,13 +212,13 @@ namespace sdslib
                 sds.WriteString("SDS", Constants.DataTypesSizes.UInt32);
                 sds.WriteUInt32(Header.Version);
                 sds.WriteString(Header.Platform.ToString(), Constants.DataTypesSizes.UInt32);
-                byte[] hash1 = new byte[3 * Constants.DataTypesSizes.UInt32];
+                byte[] hash1 = new byte[12];
                 Array.Copy(Encoding.UTF8.GetBytes("SDS\0"), 0, hash1, 0, Constants.DataTypesSizes.UInt32);
                 Array.Copy(BitConverter.GetBytes(Header.Version), 0, hash1, 4, Constants.DataTypesSizes.UInt32);
                 Array.Copy(Encoding.UTF8.GetBytes(Header.Platform.ToString()), 0, hash1, 8, Header.Platform.ToString().Length);
                 sds.WriteUInt32(FNV.Hash32(hash1));
 
-                Header.ResourceTypeTableOffset = 72;
+                Header.ResourceTypeTableOffset = Constants.SdsHeader.StandardHeaderSize;
                 sds.WriteUInt32(Header.ResourceTypeTableOffset);
                 blockTableOffsetPosition = sds.Position;
                 sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
@@ -316,23 +319,50 @@ namespace sdslib
                 Array.Copy(BitConverter.GetBytes((ulong)Header.GameVersion), 0, hash2, 32, Constants.DataTypesSizes.UInt64);
                 Array.Copy(BitConverter.GetBytes(Resources.Count), 0, hash2, 48, Constants.DataTypesSizes.UInt32);
                 sds.WriteUInt32(FNV.Hash32(hash2));
-                
+
                 sds.Seek(currentPosition, SeekOrigin.Begin);
                 sds.WriteString(XmlString);
             }
         }
 
+
+        public static SdsFile FromDirectory(string path)
+        {
+            if (!System.IO.File.Exists($@"{path}\sdscontext.json"))
+            {
+                throw new InvalidDataException();
+            }
+
+            JsonSerializerSettings settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto,
+                Formatting = Newtonsoft.Json.Formatting.Indented,
+                Converters = { new StringEnumConverter() }
+            };
+            SdsFile file = JsonConvert.DeserializeObject<SdsFile>(System.IO.File.ReadAllText($@"{path}\sdscontext.json"), settings);
+
+            foreach (var resource in file.Resources)
+            {
+                resource.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}");
+            }
+
+            return file;
+        }
+
         public void ExportToDirectory(string path)
         {
-            throw new NotImplementedException();
+            Resources.ForEach(x => x.Extract($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\{x.Info.Type.DisplayName}\{x.Name}"));
+            JsonSerializerSettings settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto,
+                Formatting = Newtonsoft.Json.Formatting.Indented,
+                Converters = { new StringEnumConverter() }
+            };
+            System.IO.File.WriteAllText($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\sdscontext.json",
+                JsonConvert.SerializeObject(this, settings));
         }
 
-        public static SdsFile ImportFromDirectory(string path)
-        {
-            throw new NotImplementedException();
-        }
-
-        private List<MemoryStream> MergeDataIntoBlocks()
+        internal List<MemoryStream> MergeDataIntoBlocks()
         {
             MemoryStream mergedData = new MemoryStream();
             foreach (var resource in Resources)
@@ -370,59 +400,62 @@ namespace sdslib
             return dataBlocks;
         }
 
-        //public void ExtractAllFiles(string path)
-        //{
-        //    foreach (File file in Files)
-        //        file.Extract(string.Format(@"{0}\{1}", path, file.GetSourcePath() != "not available" ? 
-        //            file.GetSourcePath() : file.GetName()));
-        //}
+        public void AddResource<T>(T resource) where T : Resource
+        {
+            // Later will be replaced with an abstract class
+            if (typeof(T).BaseType != typeof(Resource))
+            {
+                throw new Exception("Cannot add base type with this function.");
+            }
 
-        //public void ExtractFilesByTypeName(Type type, string destPath)
-        //{
-        //    foreach (File file in GetFiles())
-        //    {
-        //        if (file.GetType() == type)
-        //            file.Extract(string.Format(@"{0}\{1}", destPath, file.GetSourcePath() != "not available" ? 
-        //                file.GetSourcePath() : file.GetName()));
-        //    }
-        //}
+            string typeName = resource.GetType().Name;
 
-        //public void ExtractFileByName(string fileName, string destPah)
-        //{
-        //    File file = null;
+            resource.Info.Type = Header.ResourceTypes.First(x => x.DisplayName == typeName);
+            Resources.Add(resource);
+        }
 
-        //    foreach (File _file in GetFiles())
-        //    {
-        //        if (_file.GetName() == fileName)
-        //        {
-        //            file = _file;
-        //            break;
-        //        }
-        //    }
+        public T GetResourceByTypeAndName<T>(string name) where T : Resource
+        {
+            return (T)Resources.FirstOrDefault(x => x is T && x.Name == name);
+        }
 
-        //    if (file == null)
-        //        throw new Exception("File not found.");
+        public void ExtractResourcesByType<T>(string path) where T : Resource
+        {
+            // Later will be replaced with an abstract class
+            if (typeof(T).BaseType != typeof(Resource))
+            {
+                throw new Exception("Cannot call this function with base type.");
+            }
 
-        //    file.Extract(destPah);
-        //}
+            Resources.FindAll(x => x is T).ForEach(x => x.Extract($@"{path}\{x.Name}"));
+        }
 
-        //public void ReplaceFileByName(string fileName, string newFilePath)
-        //{
-        //    File file = null;
+        public void AddResourceType(EResourceType resourceType)
+        {
+            if (Header.ResourceTypes.Any(x => x.Name == resourceType))
+            {
+                throw new Exception("SDS file already contains this resource type");
+            }
 
-        //    foreach (File _file in GetFiles())
-        //    {
-        //        if (_file.GetName() == fileName)
-        //        {
-        //            file = _file;
-        //            break;
-        //        }
-        //    }
+            uint index = 0;
+            if (Header.ResourceTypes.Any())
+            {
+                index = Header.ResourceTypes.Last().Id + 1;
+            }
 
-        //    if (file == null)
-        //        throw new Exception("File not found.");
+            Header.ResourceTypes.Add(new ResourceType
+            {
+                Id = index,
+                Name = resourceType
+            });
+        }
 
-        //    file.ReplaceFile(newFilePath);
-        //}
+        public void Dispose()
+        {
+            Header = null;
+            Resources = null;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
     }
 }

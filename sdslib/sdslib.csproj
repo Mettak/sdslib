@@ -48,15 +48,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FileTypes\Animation2.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Convert.cs" />
-    <Compile Include="FileTypes\Cutscene.cs" />
     <Compile Include="FileTypes\File.cs" />
     <Compile Include="FileTypes\FileHeader.cs" />
     <Compile Include="FNV.cs" />
     <Compile Include="FileTypes\MemFile.cs" />
-    <Compile Include="FileTypes\MipMap.cs" />
     <Compile Include="FileTypes\Script.cs" />
     <Compile Include="Enums\EDataBlockType.cs" />
     <Compile Include="Enums\EPlatform.cs" />
@@ -72,8 +69,6 @@
     <Compile Include="SdsHeader.cs" />
     <Compile Include="FileTypes\Sound.cs" />
     <Compile Include="StreamHelpers.cs" />
-    <Compile Include="FileTypes\Texture.cs" />
-    <Compile Include="FileTypes\XML.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

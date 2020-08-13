@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,7 @@ namespace sdslib.ResourceTypes
             }
         }
 
+        [JsonIgnore]
         public ulong NameHash
         {
             get
@@ -25,9 +27,12 @@ namespace sdslib.ResourceTypes
             }
         }
 
+        [JsonIgnore]
         public byte Unknown8 { get; set; } = 0;
 
         public bool HasMipMap { get; set; }
+
+        public Texture() { }
 
         public Texture(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData) : 
             base(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData)
