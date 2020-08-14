@@ -59,10 +59,12 @@
     <Compile Include="Enums\EPlatform.cs" />
     <Compile Include="Enums\EGameVersion.cs" />
     <Compile Include="Enums\EResourceType.cs" />
+    <Compile Include="ResourceTypes\IResource.cs" />
     <Compile Include="ResourceTypes\MipMap.cs" />
     <Compile Include="ResourceTypes\Resource.cs" />
     <Compile Include="ResourceTypes\ResourceInfo.cs" />
     <Compile Include="ResourceTypes\ResourceType.cs" />
+    <Compile Include="ResourceTypes\Script.cs" />
     <Compile Include="ResourceTypes\Texture.cs" />
     <Compile Include="SdsFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

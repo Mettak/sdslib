@@ -186,6 +186,10 @@ namespace sdslib
                                             file.Resources.Add(new ResourceTypes.MipMap(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
 
+                                        case EResourceType.Script:
+                                            file.Resources.Add(new ResourceTypes.Script(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            break;
+
                                         default:
                                             file.Resources.Add(new Resource(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
@@ -343,7 +347,15 @@ namespace sdslib
 
             foreach (var resource in file.Resources)
             {
-                resource.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}");
+                if (resource is ResourceTypes.Script)
+                {
+                    (resource as ResourceTypes.Script).Scripts.ForEach(x => x.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}\{x.Path}"));
+                }
+
+                else
+                {
+                    resource.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}");
+                }
             }
 
             return file;

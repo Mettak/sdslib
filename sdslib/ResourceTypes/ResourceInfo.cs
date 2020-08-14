@@ -9,7 +9,7 @@ namespace sdslib.ResourceTypes
 {
     public class ResourceInfo
     {
-        public string SourceDataDescription { get; set; }
+        public string SourceDataDescription { get; set; } = "not available";
 
         public ResourceType Type { get; set; }
     }

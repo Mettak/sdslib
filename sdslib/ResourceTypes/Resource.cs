@@ -65,7 +65,7 @@ namespace sdslib.ResourceTypes
         }
 
         [JsonIgnore]
-        public byte[] Data { get; set; }
+        public virtual byte[] Data { get; set; }
 
         [JsonConstructor]
         public Resource() { }
