@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.168
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29728.190
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sdslib", "sdslib\sdslib.csproj", "{91F6FBF3-8813-454A-B3F5-3F9648077018}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sdslib.Tests", "sdslib.Tests\sdslib.Tests.csproj", "{1166D88E-0B98-4403-AF17-8CF8550100B7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{91F6FBF3-8813-454A-B3F5-3F9648077018}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{91F6FBF3-8813-454A-B3F5-3F9648077018}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{91F6FBF3-8813-454A-B3F5-3F9648077018}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1166D88E-0B98-4403-AF17-8CF8550100B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1166D88E-0B98-4403-AF17-8CF8550100B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1166D88E-0B98-4403-AF17-8CF8550100B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1166D88E-0B98-4403-AF17-8CF8550100B7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
