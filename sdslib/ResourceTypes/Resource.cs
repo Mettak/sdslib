@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace sdslib.ResourceTypes
 {
-    public class Resource
+    public class Resource : IResource
     {
         public string Guid { get; set; }
 
@@ -29,11 +29,11 @@ namespace sdslib.ResourceTypes
         }
 
         [JsonIgnore]
-        public virtual uint Size
+        public uint Size
         {
             get
             {
-                return Constants.Resource.StandardHeaderSize + (uint)Data.Length;
+                return Constants.Resource.StandardHeaderSize + (uint)Serialize().Length;
             }
         }
 
@@ -67,22 +67,22 @@ namespace sdslib.ResourceTypes
         [JsonIgnore]
         public virtual byte[] Data { get; set; }
 
-        [JsonConstructor]
-        public Resource() { }
-
-        public Resource(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
+        public static Resource Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
         {
-            Guid = System.Guid.NewGuid().ToString();
-            Info = resourceInfo;
-            Version = version;
-            SlotRamRequired = slotRamRequired;
-            SlotVRamRequired = slotVRamRequired;
-            OtherRamRequired = otherRamRequired;
-            OtherVRamRequired = otherVRamRequired;
-            Data = rawData;
+            return new Resource
+            {
+                Guid = System.Guid.NewGuid().ToString(),
+                Info = resourceInfo,
+                Version = version,
+                SlotRamRequired = slotRamRequired,
+                SlotVRamRequired = slotVRamRequired,
+                OtherRamRequired = otherRamRequired,
+                OtherVRamRequired = otherVRamRequired,
+                Data = rawData
+            };
         }
 
-        public virtual byte[] GetRawData()
+        public virtual byte[] Serialize()
         {
             return Data;
         }

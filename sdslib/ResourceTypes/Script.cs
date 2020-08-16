@@ -1,12 +1,8 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace sdslib.ResourceTypes
 {
@@ -16,18 +12,20 @@ namespace sdslib.ResourceTypes
 
         public string Path { get; set; }
 
-        public override uint Size => sizeof(ushort) + (uint)Path.Length + sizeof(uint) + base.Size;
-
         public override byte[] Data
         {
             get
             {
-                List<byte> bytes = new List<byte>();
-                foreach (var script in Scripts)
+                using (MemoryStream memory = new MemoryStream())
                 {
-                    script.Data.ToList().ForEach(x => bytes.Add(x));
+                    foreach (var script in Scripts)
+                    {
+                        byte[] scriptData = script.Serialize();
+                        memory.Write(scriptData, 0, scriptData.Length);
+                    }
+
+                    return memory.ReadAllBytes();
                 }
-                return bytes.ToArray();
             }
 
             set
@@ -36,25 +34,25 @@ namespace sdslib.ResourceTypes
             }
         }
 
-        [JsonConstructor]
-        public Script() { }
-
-        public Script(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
+        public new static Script Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
         {
-            Guid = System.Guid.NewGuid().ToString();
-            Info = resourceInfo;
-            Version = version;
-            SlotRamRequired = slotRamRequired;
-            SlotVRamRequired = slotVRamRequired;
-            OtherRamRequired = otherRamRequired;
-            OtherVRamRequired = otherVRamRequired;
-
-            ushort pathLength = BitConverter.ToUInt16(rawData, 0);
-            Path = Encoding.UTF8.GetString(rawData, sizeof(ushort), pathLength);
-            uint scriptCount = BitConverter.ToUInt32(rawData, sizeof(ushort) + pathLength);
-
-            using (MemoryStream memory = new MemoryStream(rawData.Skip(sizeof(ushort) + pathLength + sizeof(uint)).ToArray()))
+            Script script = new Script
             {
+                Guid = System.Guid.NewGuid().ToString(),
+                Info = resourceInfo,
+                Version = version,
+                SlotRamRequired = slotRamRequired,
+                SlotVRamRequired = slotVRamRequired,
+                OtherRamRequired = otherRamRequired,
+                OtherVRamRequired = otherVRamRequired
+            };
+
+            using (MemoryStream memory = new MemoryStream(rawData))
+            {
+                ushort pathLength = memory.ReadUInt16();
+                script.Path = memory.ReadString(pathLength);
+                uint scriptCount = memory.ReadUInt32();
+
                 for (int i = 0; i < scriptCount; i++)
                 {
                     ScriptFile scriptFile = new ScriptFile();
@@ -70,8 +68,22 @@ namespace sdslib.ResourceTypes
                         throw new InvalidDataException();
                     }
 
-                    Scripts.Add(scriptFile);
+                    script.Scripts.Add(scriptFile);
                 }
+            }
+
+            return script;
+        }
+
+        public override byte[] Serialize()
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                memory.WriteUInt16((ushort)Path.Length);
+                memory.WriteString(Path);
+                memory.WriteUInt32((uint)Scripts.Count);
+                memory.Write(Data, 0, Data.Length);
+                return memory.ReadAllBytes();
             }
         }
 
@@ -85,18 +97,13 @@ namespace sdslib.ResourceTypes
             Scripts.ForEach(x => x.Extract($@"{destination}\{x.Path}"));
         }
 
-        public override byte[] GetRawData()
+        public override void ReplaceData(string path)
         {
-            List<byte> buffer = new List<byte>();
-            buffer.Concat(BitConverter.GetBytes((ushort)Path.Length));
-            buffer.Concat(Encoding.UTF8.GetBytes(Path));
-            buffer.Concat(BitConverter.GetBytes((uint)Scripts.Count));
-            buffer.Concat(Data);
-            return buffer.ToArray();
+            throw new NotSupportedException();
         }
     }
 
-    public class ScriptFile
+    public class ScriptFile : IResource
     {
         public string Path { get; set; }
 
@@ -123,7 +130,7 @@ namespace sdslib.ResourceTypes
 
         public void Extract(string destination)
         {
-            if (!Directory.Exists(System.IO. Path.GetDirectoryName(destination)))
+            if (!Directory.Exists(System.IO.Path.GetDirectoryName(destination)))
             {
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destination));
             }
@@ -131,16 +138,23 @@ namespace sdslib.ResourceTypes
             System.IO.File.WriteAllBytes(destination, Data);
         }
 
-        public byte[] GetRawData()
+        public byte[] Serialize()
         {
-            byte[] bytes = new byte[sizeof(ulong) + sizeof(ulong) + 
-                sizeof(ushort) + Path.Length + sizeof(uint) + Data.Length];
-            Array.Copy(BitConverter.GetBytes(PathHash), 0, bytes, 0, sizeof(ulong));
-            Array.Copy(BitConverter.GetBytes(DataHash), 0, bytes, 8, sizeof(ulong));
-            Array.Copy(BitConverter.GetBytes((ushort)Path.Length), 0, bytes, 16, sizeof(ushort));
-            Array.Copy(Encoding.UTF8.GetBytes(Path), 0, bytes, 18, Path.Length);
-            Array.Copy(Data, 0, bytes, (18 + Path.Length), Data.Length);
-            return bytes;
+            using (MemoryStream memory = new MemoryStream())
+            {
+                memory.WriteUInt64(PathHash);
+                memory.WriteUInt64(DataHash);
+                memory.WriteUInt16((ushort)Path.Length);
+                memory.WriteString(Path);
+                memory.WriteUInt64((uint)Data.Length);
+                memory.Write(Data, 0, Data.Length);
+                return memory.ReadAllBytes();
+            }
+        }
+
+        public void ReplaceData(string path)
+        {
+            throw new NotImplementedException();
         }
     }
 }

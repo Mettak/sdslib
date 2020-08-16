@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using AutoMapper;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using sdslib.Enums;
 using sdslib.ResourceTypes;
@@ -82,6 +83,11 @@ namespace sdslib
         }
 
         public string Path { get; set; }
+
+        public SdsFile()
+        {
+            Global.Mapper = new MapperConfiguration(mc => mc.AddProfile(new MappingProfile())).CreateMapper();
+        }
 
         public static SdsFile FromFile(string sdsPath)
         {
@@ -175,23 +181,23 @@ namespace sdslib
                                     uint otherVRamRequired = decompressedData.ReadUInt32();
                                     uint checksum = decompressedData.ReadUInt32();
                                     byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
-
+                                    
                                     switch (resourceInfo.Type.Name)
                                     {
                                         case EResourceType.Texture:
-                                            file.Resources.Add(new ResourceTypes.Texture(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            file.Resources.Add(Texture.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
 
                                         case EResourceType.Mipmap:
-                                            file.Resources.Add(new ResourceTypes.MipMap(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            file.Resources.Add(MipMap.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
 
                                         case EResourceType.Script:
-                                            file.Resources.Add(new ResourceTypes.Script(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            file.Resources.Add(Script.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
 
                                         default:
-                                            file.Resources.Add(new Resource(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            file.Resources.Add(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
                                     }
                                 }
@@ -347,9 +353,9 @@ namespace sdslib
 
             foreach (var resource in file.Resources)
             {
-                if (resource is ResourceTypes.Script)
+                if (resource is Script)
                 {
-                    (resource as ResourceTypes.Script).Scripts.ForEach(x => x.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}\{x.Path}"));
+                    (resource as Script).Scripts.ForEach(x => x.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}\{x.Path}"));
                 }
 
                 else
@@ -387,7 +393,7 @@ namespace sdslib
                 mergedData.WriteUInt32(resource.OtherRamRequired);
                 mergedData.WriteUInt32(resource.OtherVRamRequired);
                 mergedData.WriteUInt32(resource.Checksum);
-                mergedData.Write(resource.GetRawData());
+                mergedData.Write(resource.Serialize());
             }
 
             mergedData.SeekToStart();

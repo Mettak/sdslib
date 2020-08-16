@@ -18,6 +18,13 @@ namespace sdslib
             return array;
         }
 
+        public static byte[] ReadAllBytesFromCurrentPosition(this Stream stream)
+        {
+            byte[] array = new byte[stream.Length - stream.Position];
+            stream.Read(array, 0, array.Length);
+            return array;
+        }
+
         public static byte[] ReadBytes(this Stream stream, int count)
         {
             byte[] array = new byte[count];

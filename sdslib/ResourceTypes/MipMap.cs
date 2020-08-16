@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,14 +10,6 @@ namespace sdslib.ResourceTypes
 {
     public class MipMap : Resource
     {
-        public override uint Size
-        {
-            get
-            {
-                return base.Size + (sizeof(UInt64) + sizeof(byte));
-            }
-        }
-
         [JsonIgnore]
         public ulong NameHash
         {
@@ -26,24 +19,30 @@ namespace sdslib.ResourceTypes
             }
         }
 
-        public byte Unknown8 { get; set; }
+        [JsonIgnore]
+        public byte Unknown8 { get; set; } = 0;
 
-        public MipMap() { }
-
-        public MipMap(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
-            : base(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData)
+        public new static MipMap Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
         {
-            Unknown8 = System.Convert.ToByte(BitConverter.ToBoolean(rawData, sizeof(UInt64)));
-            Data = rawData.Skip(sizeof(UInt64) + sizeof(byte)).ToArray();
+            MipMap texture = Global.Mapper.Map<MipMap>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+            using (MemoryStream memory = new MemoryStream(rawData))
+            {
+                memory.Seek(sizeof(ulong), SeekOrigin.Begin);
+                texture.Unknown8 = memory.ReadUInt8();
+                texture.Data = memory.ReadAllBytesFromCurrentPosition();
+            }
+            return texture;
         }
 
-        public override byte[] GetRawData()
+        public override byte[] Serialize()
         {
-            byte[] bytes = new byte[Data.Length + sizeof(UInt64) + sizeof(byte)];
-            Array.Copy(BitConverter.GetBytes(NameHash), 0, bytes, 0, sizeof(UInt64));
-            Array.Copy(BitConverter.GetBytes(Unknown8), 0, bytes, 8, sizeof(byte));
-            Array.Copy(Data, 0, bytes, 9, Data.Length);
-            return bytes;
+            using (MemoryStream memory = new MemoryStream())
+            {
+                memory.WriteUInt64(NameHash);
+                memory.WriteUInt8(Unknown8);
+                memory.Write(Data, 0, Data.Length);
+                return memory.ReadAllBytes();
+            }
         }
     }
 }
