@@ -40,5 +40,5 @@ using (SdsFile sdsFile = SdsFile.FromFile(@"E:\Games\Steam\steamapps\common\Mafi
 ```
 
 ## Notice
-* sdslib and all contents within this repository and/or organisation, are not affiliated with 2K Czech, 2K Games or Take-Two Interactive Software Inc.
+* sdslib and all contents within this repository and/or organisation, are not affiliated with 2K Czech, 2K Games, Hangar 13 Games or Take-Two Interactive Software Inc.
 * Mafia is registered trademark of Take-Two Interactive Software Inc.
