@@ -14,6 +14,7 @@ namespace sdslib
         {
             CreateMap<Resource, Texture>();
             CreateMap<Resource, MipMap>();
+            CreateMap<Resource, XML>();
         }
     }
 }

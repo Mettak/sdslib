@@ -196,6 +196,10 @@ namespace sdslib
                                             file.Resources.Add(Script.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
 
+                                        case EResourceType.XML:
+                                            file.Resources.Add(XML.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+                                            break;
+
                                         default:
                                             file.Resources.Add(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
                                             break;
