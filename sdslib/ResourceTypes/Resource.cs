@@ -82,6 +82,20 @@ namespace sdslib.ResourceTypes
             };
         }
 
+        public static Resource Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired)
+        {
+            return new Resource
+            {
+                Guid = System.Guid.NewGuid().ToString(),
+                Info = resourceInfo,
+                Version = version,
+                SlotRamRequired = slotRamRequired,
+                SlotVRamRequired = slotVRamRequired,
+                OtherRamRequired = otherRamRequired,
+                OtherVRamRequired = otherVRamRequired
+            };
+        }
+
         public virtual byte[] Serialize()
         {
             return Data;

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml;
+using System;
 
 namespace sdslib.ResourceTypes
 {
@@ -17,15 +18,80 @@ namespace sdslib.ResourceTypes
 
         public ushort Unknown16 { get; set; } = 1024;
 
-        [JsonIgnore]
-        public List<Node> Nodes { get; set; } = new List<Node>();
+        private readonly List<Node> _nodes = new List<Node>();
+
+        public override byte[] Data
+        {
+            get
+            {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.WriteUInt32((uint)_nodes.Count);
+
+                    using (MemoryStream valuesDbStream = new MemoryStream())
+                    {
+                        using (MemoryStream xmlData = new MemoryStream())
+                        {
+                            foreach (var node in _nodes)
+                            {
+                                xmlData.WriteUInt32((uint)valuesDbStream.Position);
+                                valuesDbStream.WriteUInt32(node.Name.Type);
+                                valuesDbStream.WriteUInt32(node.Name.Unknown32);
+                                valuesDbStream.WriteString(node.Name.Value.ToString());
+                                valuesDbStream.WriteByte(0);
+
+                                xmlData.WriteUInt32((uint)valuesDbStream.Position);
+                                valuesDbStream.WriteUInt32(node.Value.Type);
+                                valuesDbStream.WriteUInt32(node.Value.Unknown32);
+                                valuesDbStream.WriteString(node.Value.Value.ToString());
+                                valuesDbStream.WriteByte(0);
+
+                                xmlData.WriteUInt32(node.Id);
+                                xmlData.WriteUInt32((uint)node.Childs.Count);
+                                foreach (var child in node.Childs)
+                                {
+                                    xmlData.WriteUInt32(child);
+                                }
+
+                                xmlData.WriteUInt32((uint)node.Attributes.Count);
+                                foreach (var attribute in node.Attributes)
+                                {
+                                    xmlData.WriteUInt32((uint)valuesDbStream.Position);
+                                    valuesDbStream.WriteUInt32(attribute.Name.Type);
+                                    valuesDbStream.WriteUInt32(attribute.Name.Unknown32);
+                                    valuesDbStream.WriteString(attribute.Name.Value.ToString());
+                                    valuesDbStream.WriteByte(0);
+
+                                    xmlData.WriteUInt32((uint)valuesDbStream.Position);
+                                    valuesDbStream.WriteUInt32(attribute.Value.Type);
+                                    valuesDbStream.WriteUInt32(attribute.Value.Unknown32);
+                                    valuesDbStream.WriteString(attribute.Value.Value.ToString());
+                                    valuesDbStream.WriteByte(0);
+                                }
+                            }
+
+                            ms.WriteUInt32((uint)valuesDbStream.Length);
+                            ms.Write(valuesDbStream.ReadAllBytes());
+                            ms.Write(xmlData.ReadAllBytes());
+                        }
+                    }
+
+                    return ms.ReadAllBytes();
+                }
+            }
+
+            set
+            {
+                throw new NotSupportedException();
+            }
+        }
 
         [JsonIgnore]
         public string XmlString
         {
             get
             {
-                if (!Nodes.Any())
+                if (!_nodes.Any())
                 {
                     return string.Empty;
                 }
@@ -38,7 +104,7 @@ namespace sdslib.ResourceTypes
                 using (XmlWriter xmlWriter = XmlWriter.Create(stringBuilder, settings))
                 {
                     xmlWriter.WriteStartDocument();
-                    var root = Nodes.First(x => x.Id == 1);
+                    var root = _nodes.First(x => x.Id == 1);
                     xmlWriter.WriteStartElement(root.Name.Value.ToString());
                     foreach (var attribute in root.Attributes)
                     {
@@ -48,13 +114,14 @@ namespace sdslib.ResourceTypes
                     if (!string.IsNullOrEmpty(root.Value.Value.ToString()))
                     {
                         xmlWriter.WriteAttributeString($"__type", root.Value.Type.ToString());
+                        xmlWriter.WriteAttributeString($"__unknown32", root.Value.Unknown32.ToString());
                         xmlWriter.WriteValue(root.Value.Value);
                     }
 
                     foreach (var childId in root.Childs)
                     {
-                        var child = Nodes.First(x => x.Id == childId);
-                        WriteXmlNode(xmlWriter, Nodes, child);
+                        var child = _nodes.First(x => x.Id == childId);
+                        WriteXmlNode(xmlWriter, _nodes, child);
                     }
 
                     xmlWriter.WriteEndElement();
@@ -76,21 +143,46 @@ namespace sdslib.ResourceTypes
             if (!string.IsNullOrEmpty(node.Value.Value.ToString()))
             {
                 writer.WriteAttributeString($"__type", node.Value.Type.ToString());
+                writer.WriteAttributeString($"__unknown32", node.Value.Unknown32.ToString());
                 writer.WriteValue(node.Value.Value);
             }
 
             foreach (var childId in node.Childs)
             {
-                var child = Nodes.First(x => x.Id == childId);
+                var child = _nodes.First(x => x.Id == childId);
                 WriteXmlNode(writer, nodes, child);
             }
 
             writer.WriteEndElement();
         }
 
+        public override byte[] Serialize()
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                ms.WriteUInt32((uint)TargetModule.Length);
+                ms.WriteString(TargetModule);
+                ms.WriteUInt8(Unknown8);
+                ms.WriteUInt32((uint)Path.Length);
+                ms.WriteString(Path);
+                ms.WriteUInt16(Unknown16);
+                ms.Write(Data);
+                return ms.ReadAllBytes();
+            }
+        }
+
         public new static XML Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
         {
-            XML xml = Global.Mapper.Map<XML>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+            XML xml = new XML
+            {
+                Info = resourceInfo,
+                Version = version,
+                SlotRamRequired = slotRamRequired,
+                SlotVRamRequired = slotVRamRequired,
+                OtherRamRequired = otherRamRequired,
+                OtherVRamRequired = otherVRamRequired
+            };
+
             using (MemoryStream memory = new MemoryStream(rawData))
             {
                 xml.TargetModule = memory.ReadString((int)memory.ReadUInt32());
@@ -154,7 +246,7 @@ namespace sdslib.ResourceTypes
                             node.Attributes.Add(attribute);
                         }
 
-                        xml.Nodes.Add(node);
+                        xml._nodes.Add(node);
                     }
                 }
             }
