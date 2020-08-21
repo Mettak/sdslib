@@ -52,29 +52,49 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
-    <Compile Include="Convert.cs" />
-    <Compile Include="FileTypes\File.cs" />
-    <Compile Include="FileTypes\FileHeader.cs" />
     <Compile Include="FNV.cs" />
-    <Compile Include="FileTypes\MemFile.cs" />
     <Compile Include="Enums\EDataBlockType.cs" />
     <Compile Include="Enums\EPlatform.cs" />
     <Compile Include="Enums\EGameVersion.cs" />
     <Compile Include="Enums\EResourceType.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="MappingProfile.cs" />
+    <Compile Include="ResourceTypes\Actors.cs" />
+    <Compile Include="ResourceTypes\AnimalTrafficPaths.cs" />
+    <Compile Include="ResourceTypes\AnimatedTexture.cs" />
+    <Compile Include="ResourceTypes\Animation2.cs" />
+    <Compile Include="ResourceTypes\AudioSectors.cs" />
+    <Compile Include="ResourceTypes\Collisions.cs" />
+    <Compile Include="ResourceTypes\Cutscene.cs" />
+    <Compile Include="ResourceTypes\Effects.cs" />
+    <Compile Include="ResourceTypes\EntityDataStorage.cs" />
+    <Compile Include="ResourceTypes\FrameNameTable.cs" />
+    <Compile Include="ResourceTypes\FrameResource.cs" />
+    <Compile Include="ResourceTypes\FxActor.cs" />
+    <Compile Include="ResourceTypes\FxAnimSet.cs" />
+    <Compile Include="ResourceTypes\IndexBufferPool.cs" />
     <Compile Include="ResourceTypes\IResource.cs" />
+    <Compile Include="ResourceTypes\ItemDesc.cs" />
+    <Compile Include="ResourceTypes\MemFile.cs" />
     <Compile Include="ResourceTypes\MipMap.cs" />
+    <Compile Include="ResourceTypes\NAV_AIWORLD_DATA.cs" />
+    <Compile Include="ResourceTypes\NAV_OBJ_DATA.cs" />
+    <Compile Include="ResourceTypes\PREFAB.cs" />
     <Compile Include="ResourceTypes\Resource.cs" />
     <Compile Include="ResourceTypes\ResourceInfo.cs" />
     <Compile Include="ResourceTypes\ResourceType.cs" />
     <Compile Include="ResourceTypes\Script.cs" />
+    <Compile Include="ResourceTypes\Sound.cs" />
+    <Compile Include="ResourceTypes\SoundTable.cs" />
+    <Compile Include="ResourceTypes\Speech.cs" />
+    <Compile Include="ResourceTypes\Table.cs" />
     <Compile Include="ResourceTypes\Texture.cs" />
+    <Compile Include="ResourceTypes\Translokator.cs" />
+    <Compile Include="ResourceTypes\VertexBufferPool.cs" />
     <Compile Include="ResourceTypes\XML.cs" />
     <Compile Include="SdsFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SdsHeader.cs" />
-    <Compile Include="FileTypes\Sound.cs" />
     <Compile Include="StreamHelpers.cs" />
   </ItemGroup>
   <ItemGroup>

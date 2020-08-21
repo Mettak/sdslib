@@ -7,9 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
+using System.Reflection;
 using System.Text;
-using System.Threading;
 using System.Xml;
 using zlib;
 
@@ -57,6 +56,8 @@ namespace sdslib
             }
         }
 
+        private readonly IMapper _mapper;
+
         [JsonIgnore]
         public string XmlString
         {
@@ -86,7 +87,7 @@ namespace sdslib
 
         public SdsFile()
         {
-            Global.Mapper = new MapperConfiguration(mc => mc.AddProfile(new MappingProfile())).CreateMapper();
+            _mapper = new MapperConfiguration(mc => mc.AddProfile(new MappingProfile())).CreateMapper();
         }
 
         public static SdsFile FromFile(string sdsPath)
@@ -181,29 +182,21 @@ namespace sdslib
                                     uint otherVRamRequired = decompressedData.ReadUInt32();
                                     uint checksum = decompressedData.ReadUInt32();
                                     byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
-                                    
-                                    switch (resourceInfo.Type.Name)
+
+                                    List<Type> resourceTypes = new List<Type>();
+                                    foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
                                     {
-                                        case EResourceType.Texture:
-                                            file.Resources.Add(Texture.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                            break;
-
-                                        case EResourceType.Mipmap:
-                                            file.Resources.Add(MipMap.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                            break;
-
-                                        case EResourceType.Script:
-                                            file.Resources.Add(Script.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                            break;
-
-                                        case EResourceType.XML:
-                                            file.Resources.Add(XML.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                            break;
-
-                                        default:
-                                            file.Resources.Add(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
-                                            break;
+                                        if (type.BaseType == typeof(Resource))
+                                        {
+                                            resourceTypes.Add(type);
+                                        }
                                     }
+
+                                    var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.DisplayName);
+                                    var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
+                                    var resourecInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
+                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData, file._mapper });
+                                    file.Resources.Add(resourecInstance);
                                 }
                             }
                         }
@@ -357,9 +350,16 @@ namespace sdslib
 
             foreach (var resource in file.Resources)
             {
+                resource.Info.Type = file.Header.ResourceTypes.First(x => x.DisplayName == resource.GetType().Name);
+
                 if (resource is Script)
                 {
                     (resource as Script).Scripts.ForEach(x => x.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}\{x.Path}"));
+                }
+
+                else if (resource is XML)
+                {
+                    (resource as XML).ParseXml($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}.xml");
                 }
 
                 else

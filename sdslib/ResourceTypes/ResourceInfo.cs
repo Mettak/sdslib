@@ -11,6 +11,7 @@ namespace sdslib.ResourceTypes
     {
         public string SourceDataDescription { get; set; } = "not available";
 
+        [JsonIgnore]
         public ResourceType Type { get; set; }
     }
 }

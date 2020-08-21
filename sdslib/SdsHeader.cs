@@ -115,8 +115,8 @@ namespace sdslib
                     ResourceType resourceType = new ResourceType();
                     resourceType.Id = fileStream.ReadUInt32();
                     uint resourceLenght = fileStream.ReadUInt32();
-                    resourceType.Name = (EResourceType)Enum.Parse(typeof(EResourceType),
-                        fileStream.ReadString((int)resourceLenght));
+                    string typeStr = fileStream.ReadString((int)resourceLenght).Replace(" ", "");
+                    resourceType.Name = (EResourceType)Enum.Parse(typeof(EResourceType), typeStr);
                     uint unknown32 = fileStream.ReadUInt32();
                     if (unknown32 != resourceType.Unknown32)
                     {

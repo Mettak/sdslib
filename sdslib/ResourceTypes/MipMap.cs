@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using AutoMapper;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,9 +23,9 @@ namespace sdslib.ResourceTypes
         [JsonIgnore]
         public byte Unknown8 { get; set; } = 0;
 
-        public new static MipMap Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData)
+        public new static MipMap Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData, IMapper mapper)
         {
-            MipMap texture = Global.Mapper.Map<MipMap>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData));
+            MipMap texture = Global.Mapper.Map<MipMap>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData, null));
             using (MemoryStream memory = new MemoryStream(rawData))
             {
                 memory.Seek(sizeof(ulong), SeekOrigin.Begin);

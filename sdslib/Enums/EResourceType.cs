@@ -4,12 +4,17 @@
     {
         Actors,
         AnimalTrafficPaths,
+        AnimatedTexture,
         Animation2,
         AudioSectors,
         Collisions,
         Cutscene,
+        Effects,
+        EntityDataStorage,
         FrameNameTable,
         FrameResource,
+        FxActor,
+        FxAnimSet,
         IndexBufferPool,
         ItemDesc,
         MemFile,
@@ -19,10 +24,12 @@
         PREFAB,
         Script,
         Sound,
-        Texture,
-        VertexBufferPool,
-        XML,
         SoundTable,
-        Table
+        Speech,
+        Table,
+        Texture,
+        Translokator,
+        VertexBufferPool,
+        XML
     }
 }
