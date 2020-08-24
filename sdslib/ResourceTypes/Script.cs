@@ -147,7 +147,7 @@ namespace sdslib.ResourceTypes
                 memory.WriteUInt64(DataHash);
                 memory.WriteUInt16((ushort)Path.Length);
                 memory.WriteString(Path);
-                memory.WriteUInt64((uint)Data.Length);
+                memory.WriteUInt32((uint)Data.Length);
                 memory.Write(Data, 0, Data.Length);
                 return memory.ReadAllBytes();
             }

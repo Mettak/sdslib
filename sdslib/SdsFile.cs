@@ -346,7 +346,7 @@ namespace sdslib
                 Formatting = Newtonsoft.Json.Formatting.Indented,
                 Converters = { new StringEnumConverter() }
             };
-            SdsFile file = JsonConvert.DeserializeObject<SdsFile>(System.IO.File.ReadAllText($@"{path}\sdscontext.json"), settings);
+            SdsFile file = JsonConvert.DeserializeObject<SdsFile>(File.ReadAllText($@"{path}\sdscontext.json"), settings);
 
             foreach (var resource in file.Resources)
             {
@@ -354,7 +354,7 @@ namespace sdslib
 
                 if (resource is Script)
                 {
-                    (resource as Script).Scripts.ForEach(x => x.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}\{x.Path}"));
+                    (resource as Script).Scripts.ForEach(x => x.Data = File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}\{x.Path}"));
                 }
 
                 else if (resource is XML)
@@ -364,7 +364,7 @@ namespace sdslib
 
                 else
                 {
-                    resource.Data = System.IO.File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}");
+                    resource.Data = File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}");
                 }
             }
 

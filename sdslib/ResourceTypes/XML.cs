@@ -23,7 +23,7 @@ namespace sdslib.ResourceTypes
 
         public ushort Unknown16 { get; set; } = 1024; // maybe it's version
 
-        private List<Node> _nodes = new List<Node>();
+        private readonly List<Node> _nodes = new List<Node>();
 
         private byte[] rawUnsolved { get; set; }
         public override byte[] Data
