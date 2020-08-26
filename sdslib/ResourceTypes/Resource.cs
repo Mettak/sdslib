@@ -1,11 +1,6 @@
 ﻿using AutoMapper;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace sdslib.ResourceTypes
 {
@@ -53,15 +48,17 @@ namespace sdslib.ResourceTypes
         {
             get
             {
-                byte[] bytes = new byte[26];
-                Array.Copy(BitConverter.GetBytes(Info.Type.Id), 0, bytes, 0, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Size), 0, bytes, 4, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Version), 0, bytes, 8, Constants.DataTypesSizes.UInt16);
-                Array.Copy(BitConverter.GetBytes(SlotRamRequired), 0, bytes, 10, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(SlotVRamRequired), 0, bytes, 14, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(OtherRamRequired), 0, bytes, 18, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(OtherVRamRequired), 0, bytes, 22, Constants.DataTypesSizes.UInt32);
-                return FNV.Hash32(bytes);
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.WriteUInt32(Info.Type.Id);
+                    ms.WriteUInt32(Size);
+                    ms.WriteUInt16(Version);
+                    ms.WriteUInt32(SlotRamRequired);
+                    ms.WriteUInt32(SlotVRamRequired);
+                    ms.WriteUInt32(OtherRamRequired);
+                    ms.WriteUInt32(OtherVRamRequired);
+                    return FNV.Hash32(ms.ReadAllBytes());
+                }
             }
         }
 
@@ -95,17 +92,17 @@ namespace sdslib.ResourceTypes
                 Directory.CreateDirectory(Path.GetDirectoryName(destination));
             }
 
-            System.IO.File.WriteAllBytes(destination, Data);
+            File.WriteAllBytes(destination, Data);
         }
 
         public virtual void ReplaceData(string path)
         {
-            if (!System.IO.File.Exists(path))
+            if (!File.Exists(path))
             {
-                throw new FileNotFoundException();
+                throw new FileNotFoundException(path);
             }
 
-            Data = System.IO.File.ReadAllBytes(path);
+            Data = File.ReadAllBytes(path);
         }
     }
 }

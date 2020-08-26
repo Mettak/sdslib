@@ -4,8 +4,6 @@ using sdslib.ResourceTypes;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Xml;
 
 namespace sdslib
 {
@@ -42,14 +40,14 @@ namespace sdslib
                 if (fileStream.Length < Constants.SdsHeader.StandardHeaderSize)
                     throw new InvalidDataException("Invalid file!");
 
-                if (fileStream.ReadString(Constants.DataTypesSizes.UInt32) != "SDS")
+                if (fileStream.ReadString(sizeof(uint)) != "SDS")
                     throw new Exception("This file does not contain SDS header!");
 
                 header.Version = fileStream.ReadUInt32();
                 if (header.Version > Constants.SdsHeader.Version)
                     throw new NotSupportedException("Unsupported version of SDS file!");
 
-                if (Enum.TryParse(fileStream.ReadString(Constants.DataTypesSizes.UInt32), out EPlatform platform))
+                if (Enum.TryParse(fileStream.ReadString(sizeof(uint)), out EPlatform platform))
                 {
                     header.Platform = platform;
                 }
@@ -83,30 +81,34 @@ namespace sdslib
                 header.GameVersion = (EGameVersion)fileStream.ReadUInt64();
 
                 if (header.GameVersion != EGameVersion.Classic && header.GameVersion != EGameVersion.DefinitiveEdition)
-                    throw new NotSupportedException();
+                    throw new NotSupportedException(header.GameVersion.ToString());
 
                 // Skipping of null bytes
-                fileStream.Seek(Constants.DataTypesSizes.UInt64, SeekOrigin.Current);
+                fileStream.Seek(sizeof(ulong), SeekOrigin.Current);
 
                 uint numberOfFiles = fileStream.ReadUInt32();
 
                 uint checksum = fileStream.ReadUInt32();
 
-                byte[] bytes = new byte[52];
-                Array.Copy(BitConverter.GetBytes(header.ResourceTypeTableOffset), 0, bytes, 0, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(header.BlockTableOffset), 0, bytes, 4, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(header.XmlOffset), 0, bytes, 8, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(slotRamRequired), 0, bytes, 12, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(slotVRamRequired), 0, bytes, 16, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(otherRamRequired), 0, bytes, 20, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(otherVRamRequired), 0, bytes, 24, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown32_2C), 0, bytes, 28, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes((ulong)header.GameVersion), 0, bytes, 32, Constants.DataTypesSizes.UInt64);
-                Array.Copy(BitConverter.GetBytes(numberOfFiles), 0, bytes, 48, Constants.DataTypesSizes.UInt32);
-                uint calculatedChecksum = FNV.Hash32(bytes);
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.WriteUInt32(header.ResourceTypeTableOffset);
+                    ms.WriteUInt32(header.BlockTableOffset);
+                    ms.WriteUInt32(header.XmlOffset);
+                    ms.WriteUInt32(slotRamRequired);
+                    ms.WriteUInt32(slotVRamRequired);
+                    ms.WriteUInt32(otherRamRequired);
+                    ms.WriteUInt32(otherVRamRequired);
+                    ms.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
+                    ms.WriteUInt64((ulong)header.GameVersion);
+                    ms.WriteUInt64(0);
+                    ms.WriteUInt32(numberOfFiles);
 
-                if (calculatedChecksum != checksum)
-                    throw new Exception("Checksum difference!");
+                    uint calculatedChecksum = FNV.Hash32(ms.ReadAllBytes());
+
+                    if (calculatedChecksum != checksum)
+                        throw new Exception("Checksum difference!");
+                }
 
                 fileStream.Seek(header.ResourceTypeTableOffset, SeekOrigin.Begin);
                 uint numberOfResources = fileStream.ReadUInt32();
@@ -120,7 +122,7 @@ namespace sdslib
                     uint unknown32 = fileStream.ReadUInt32();
                     if (unknown32 != resourceType.Unknown32)
                     {
-                        throw new InvalidDataException();
+                        throw new InvalidDataException(unknown32.ToString());
                     }
                     header.ResourceTypes.Add(resourceType);
                 }

@@ -1,15 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using AutoMapper;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml;
-using System;
-using System.Net.Http.Headers;
 using System.Xml.Linq;
-using System.Runtime.InteropServices;
-using AutoMapper;
-using System.Security.Cryptography;
 
 namespace sdslib.ResourceTypes
 {
@@ -139,7 +136,7 @@ namespace sdslib.ResourceTypes
                     xmlWriter.WriteStartElement(root.Name.Value.ToString());
                     foreach (var attribute in root.Attributes)
                     {
-                        xmlWriter.WriteAttributeString(attribute.Name.Value.ToString(), 
+                        xmlWriter.WriteAttributeString(attribute.Name.Value.ToString(),
                             attribute.Value.Value.ToString());
                     }
 
@@ -213,7 +210,7 @@ namespace sdslib.ResourceTypes
             }
         }
 
-        public new static XML Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, 
+        public new static XML Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired,
             uint otherRamRequired, uint otherVRamRequired, byte[] rawData, IMapper mapper)
         {
             XML xml = new XML

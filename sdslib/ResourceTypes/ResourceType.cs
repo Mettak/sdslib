@@ -1,10 +1,5 @@
 ﻿using Newtonsoft.Json;
 using sdslib.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace sdslib.ResourceTypes
 {
@@ -36,13 +31,10 @@ namespace sdslib.ResourceTypes
 
         public EResourceType Name { get; set; }
 
-        [JsonIgnore]
-        public string DisplayName
+        public override string ToString()
         {
-            get
-            {
-                return Name.ToString();
-            }
+            
+            return Name.ToString();
         }
     }
 }

@@ -57,7 +57,6 @@
     <Compile Include="Enums\EPlatform.cs" />
     <Compile Include="Enums\EGameVersion.cs" />
     <Compile Include="Enums\EResourceType.cs" />
-    <Compile Include="Global.cs" />
     <Compile Include="MappingProfile.cs" />
     <Compile Include="ResourceTypes\Actors.cs" />
     <Compile Include="ResourceTypes\AnimalTrafficPaths.cs" />

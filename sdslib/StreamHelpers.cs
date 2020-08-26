@@ -39,21 +39,21 @@ namespace sdslib
 
         public static ushort ReadUInt16(this Stream stream)
         {
-            byte[] array = new byte[Constants.DataTypesSizes.UInt16];
+            byte[] array = new byte[sizeof(ushort)];
             stream.Read(array, 0, array.Length);
             return BitConverter.ToUInt16(array, 0);
         }
 
         public static uint ReadUInt32(this Stream stream)
         {
-            byte[] array = new byte[Constants.DataTypesSizes.UInt32];
+            byte[] array = new byte[sizeof(uint)];
             stream.Read(array, 0, array.Length);
             return BitConverter.ToUInt32(array, 0);
         }
 
         public static ulong ReadUInt64(this Stream stream)
         {
-            byte[] array = new byte[Constants.DataTypesSizes.UInt64];
+            byte[] array = new byte[sizeof(ulong)];
             stream.Read(array, 0, array.Length);
             return BitConverter.ToUInt64(array, 0);
         }
@@ -93,22 +93,22 @@ namespace sdslib
 
         public static void WriteUInt8(this Stream stream, byte uint8)
         {
-            stream.Write(BitConverter.GetBytes(uint8), 0, Constants.DataTypesSizes.UInt8);
+            stream.Write(BitConverter.GetBytes(uint8), 0, sizeof(byte));
         }
 
         public static void WriteUInt16(this Stream stream, ushort uint16)
         {
-            stream.Write(BitConverter.GetBytes(uint16), 0, Constants.DataTypesSizes.UInt16);
+            stream.Write(BitConverter.GetBytes(uint16), 0, sizeof(ushort));
         }
 
         public static void WriteUInt32(this Stream stream, uint uint32)
         {
-            stream.Write(BitConverter.GetBytes(uint32), 0, Constants.DataTypesSizes.UInt32);
+            stream.Write(BitConverter.GetBytes(uint32), 0, sizeof(uint));
         }
 
         public static void WriteUInt64(this Stream stream, ulong uint64)
         {
-            stream.Write(BitConverter.GetBytes(uint64), 0, Constants.DataTypesSizes.UInt64);
+            stream.Write(BitConverter.GetBytes(uint64), 0, sizeof(ulong));
         }
 
         public static string ReadStringDynamic(this Stream stream, Encoding encoding, char end)
@@ -125,7 +125,7 @@ namespace sdslib
                 {
                     Array.Resize(ref data, data.Length + (128 * characterSize));
                 }
-                
+
                 stream.Read(data, i, characterSize);
 
                 if (encoding.GetString(data, i, characterSize) == characterEnd)

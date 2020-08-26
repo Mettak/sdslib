@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Xml;
 using zlib;
 
@@ -16,6 +15,8 @@ namespace sdslib
 {
     public class SdsFile : IDisposable
     {
+        private readonly IMapper _mapper;
+
         public List<Resource> Resources { get; set; } = new List<Resource>();
 
         public SdsHeader Header { get; set; } = new SdsHeader();
@@ -56,8 +57,6 @@ namespace sdslib
             }
         }
 
-        private readonly IMapper _mapper;
-
         [JsonIgnore]
         public string XmlString
         {
@@ -68,7 +67,7 @@ namespace sdslib
                 foreach (var resource in Resources)
                 {
                     xmlFile += "\t<ResourceInfo>\n\t\t<CustomDebugInfo/>\n\t\t";
-                    xmlFile += "<TypeName>" + resource.Info.Type.DisplayName + "</TypeName>\n\t\t";
+                    xmlFile += "<TypeName>" + resource.Info.Type.ToString() + "</TypeName>\n\t\t";
                     xmlFile += "<SourceDataDescription>" + resource.Info.SourceDataDescription + "</SourceDataDescription>\n\t\t";
                     xmlFile += "<SlotRamRequired __type='Int'>" + resource.SlotRamRequired + "</SlotRamRequired>\n\t\t";
                     xmlFile += "<SlotVramRequired __type='Int'>" + resource.SlotVRamRequired + "</SlotVramRequired>\n\t\t";
@@ -93,7 +92,7 @@ namespace sdslib
         public static SdsFile FromFile(string sdsPath)
         {
             SdsFile file = new SdsFile();
-            file.Path = sdsPath;
+            file.Path = System.IO.Path.GetFullPath(sdsPath);
             file.Header = SdsHeader.FromFile(sdsPath);
 
             using (FileStream fileStream = new FileStream(sdsPath, FileMode.Open, FileAccess.Read))
@@ -192,7 +191,7 @@ namespace sdslib
                                         }
                                     }
 
-                                    var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.DisplayName);
+                                    var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
                                     var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
                                     var resourecInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
                                         resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData, file._mapper });
@@ -216,21 +215,24 @@ namespace sdslib
                 long xmlOffsetPosition;
                 long headerChecksumPosition;
 
-                sds.WriteString("SDS", Constants.DataTypesSizes.UInt32);
+                sds.WriteString("SDS", sizeof(uint));
                 sds.WriteUInt32(Header.Version);
-                sds.WriteString(Header.Platform.ToString(), Constants.DataTypesSizes.UInt32);
-                byte[] hash1 = new byte[12];
-                Array.Copy(Encoding.UTF8.GetBytes("SDS\0"), 0, hash1, 0, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Header.Version), 0, hash1, 4, Constants.DataTypesSizes.UInt32);
-                Array.Copy(Encoding.UTF8.GetBytes(Header.Platform.ToString()), 0, hash1, 8, Header.Platform.ToString().Length);
-                sds.WriteUInt32(FNV.Hash32(hash1));
+                sds.WriteString(Header.Platform.ToString(), sizeof(uint));
+
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.WriteString("SDS", sizeof(uint));
+                    ms.WriteUInt32(Header.Version);
+                    ms.WriteString(Header.Platform.ToString(), sizeof(uint));
+                    sds.WriteUInt32(FNV.Hash32(ms.ReadAllBytes()));
+                }
 
                 Header.ResourceTypeTableOffset = Constants.SdsHeader.StandardHeaderSize;
                 sds.WriteUInt32(Header.ResourceTypeTableOffset);
                 blockTableOffsetPosition = sds.Position;
-                sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+                sds.Seek(sizeof(uint), SeekOrigin.Current);
                 xmlOffsetPosition = sds.Position;
-                sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+                sds.Seek(sizeof(uint), SeekOrigin.Current);
 
                 sds.WriteUInt32(SlotRamRequired);
                 sds.WriteUInt32(SlotVRamRequired);
@@ -240,18 +242,18 @@ namespace sdslib
                 sds.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
                 sds.WriteUInt64((ulong)Header.GameVersion);
 
-                sds.Seek(Constants.DataTypesSizes.UInt64, SeekOrigin.Current);
+                sds.Seek(sizeof(ulong), SeekOrigin.Current);
                 sds.WriteUInt32((uint)Resources.Count);
 
                 headerChecksumPosition = sds.Position;
-                sds.Seek(Constants.DataTypesSizes.UInt32, SeekOrigin.Current);
+                sds.Seek(sizeof(uint), SeekOrigin.Current);
 
                 sds.WriteUInt32((uint)Header.ResourceTypes.Count);
                 foreach (ResourceType resourceType in Header.ResourceTypes)
                 {
                     sds.WriteUInt32(resourceType.Id);
-                    sds.WriteUInt32((uint)resourceType.DisplayName.Length);
-                    sds.WriteString(resourceType.DisplayName);
+                    sds.WriteUInt32((uint)resourceType.ToString().Length);
+                    sds.WriteString(resourceType.ToString());
                     sds.WriteUInt32(resourceType.Unknown32);
                 }
 
@@ -314,30 +316,32 @@ namespace sdslib
                 sds.WriteUInt32((uint)currentPosition);
                 sds.Seek(headerChecksumPosition, SeekOrigin.Begin);
 
-                byte[] hash2 = new byte[52];
-                Array.Copy(BitConverter.GetBytes(Header.ResourceTypeTableOffset), 0, hash2, 0, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Header.BlockTableOffset), 0, hash2, 4, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Header.XmlOffset), 0, hash2, 8, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(SlotRamRequired), 0, hash2, 12, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(SlotVRamRequired), 0, hash2, 16, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(OtherRamRequired), 0, hash2, 20, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(OtherVRamRequired), 0, hash2, 24, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes(Constants.SdsHeader.Unknown32_2C), 0, hash2, 28, Constants.DataTypesSizes.UInt32);
-                Array.Copy(BitConverter.GetBytes((ulong)Header.GameVersion), 0, hash2, 32, Constants.DataTypesSizes.UInt64);
-                Array.Copy(BitConverter.GetBytes(Resources.Count), 0, hash2, 48, Constants.DataTypesSizes.UInt32);
-                sds.WriteUInt32(FNV.Hash32(hash2));
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.WriteUInt32(Header.ResourceTypeTableOffset);
+                    ms.WriteUInt32(Header.BlockTableOffset);
+                    ms.WriteUInt32(Header.XmlOffset);
+                    ms.WriteUInt32(SlotRamRequired);
+                    ms.WriteUInt32(SlotVRamRequired);
+                    ms.WriteUInt32(OtherRamRequired);
+                    ms.WriteUInt32(OtherVRamRequired);
+                    ms.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
+                    ms.WriteUInt64((ulong)Header.GameVersion);
+                    ms.WriteUInt64(0);
+                    ms.WriteUInt32((uint)Resources.Count);
+                    sds.WriteUInt32(FNV.Hash32(ms.ReadAllBytes()));
+                }
 
                 sds.Seek(currentPosition, SeekOrigin.Begin);
                 sds.WriteString(XmlString);
             }
         }
 
-
         public static SdsFile FromDirectory(string path)
         {
-            if (!System.IO.File.Exists($@"{path}\sdscontext.json"))
+            if (!File.Exists($@"{path}\sdscontext.json"))
             {
-                throw new InvalidDataException();
+                throw new InvalidDataException(@"""sdscontext.json"" missing");
             }
 
             JsonSerializerSettings settings = new JsonSerializerSettings
@@ -350,21 +354,21 @@ namespace sdslib
 
             foreach (var resource in file.Resources)
             {
-                resource.Info.Type = file.Header.ResourceTypes.First(x => x.DisplayName == resource.GetType().Name);
+                resource.Info.Type = file.Header.ResourceTypes.First(x => x.ToString() == resource.GetType().Name);
 
                 if (resource is Script)
                 {
-                    (resource as Script).Scripts.ForEach(x => x.Data = File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}\{x.Path}"));
+                    (resource as Script).Scripts.ForEach(x => x.Data = File.ReadAllBytes($@"{path}\{resource.Info.Type}\{resource.Name}\{x.Path}"));
                 }
 
                 else if (resource is XML)
                 {
-                    (resource as XML).ParseXml($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}.xml");
+                    (resource as XML).ParseXml($@"{path}\{resource.Info.Type}\{resource.Name}.xml");
                 }
 
                 else
                 {
-                    resource.Data = File.ReadAllBytes($@"{path}\{resource.Info.Type.DisplayName}\{resource.Name}");
+                    resource.Data = File.ReadAllBytes($@"{path}\{resource.Info.Type}\{resource.Name}");
                 }
             }
 
@@ -373,14 +377,14 @@ namespace sdslib
 
         public void ExportToDirectory(string path)
         {
-            Resources.ForEach(x => x.Extract($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\{x.Info.Type.DisplayName}\{x.Name}"));
+            Resources.ForEach(x => x.Extract($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\{x.Info.Type}\{x.Name}"));
             JsonSerializerSettings settings = new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto,
                 Formatting = Newtonsoft.Json.Formatting.Indented,
                 Converters = { new StringEnumConverter() }
             };
-            System.IO.File.WriteAllText($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\sdscontext.json",
+            File.WriteAllText($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\sdscontext.json",
                 JsonConvert.SerializeObject(this, settings));
         }
 
@@ -432,7 +436,7 @@ namespace sdslib
 
             string typeName = resource.GetType().Name;
 
-            resource.Info.Type = Header.ResourceTypes.First(x => x.DisplayName == typeName);
+            resource.Info.Type = Header.ResourceTypes.First(x => x.ToString() == typeName);
             Resources.Add(resource);
         }
 
