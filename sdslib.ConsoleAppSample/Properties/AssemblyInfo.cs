@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("sdslib")]
-[assembly: AssemblyDescription("DLL library with whose help you can manage SDS files (Mafia II only).")]
+[assembly: AssemblyTitle("sdslib.ConsoleAppSample")]
+[assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Mettak")]
-[assembly: AssemblyProduct("sdslib")]
-[assembly: AssemblyCopyright("©  2020 Mettak. All rights reserved.")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("sdslib.ConsoleAppSample")]
+[assembly: AssemblyCopyright("Copyright ©  2020")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("91f6fbf3-8813-454a-b3f5-3f9648077018")]
+[assembly: Guid("333eefec-80c8-481d-9434-a4f9e13a83a3")]
 
 // Version information for an assembly consists of the following four values:
 //

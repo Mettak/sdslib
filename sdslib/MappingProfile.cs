@@ -23,7 +23,7 @@ namespace sdslib
             CreateMap<Resource, IndexBufferPool>();
             CreateMap<Resource, ItemDesc>();
             CreateMap<Resource, MemFile>();
-            CreateMap<Resource, MipMap>();
+            CreateMap<Resource, Mipmap>();
             CreateMap<Resource, NAV_AIWORLD_DATA>();
             CreateMap<Resource, NAV_OBJ_DATA>();
             CreateMap<Resource, PREFAB>();

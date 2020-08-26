@@ -75,7 +75,7 @@
     <Compile Include="ResourceTypes\IResource.cs" />
     <Compile Include="ResourceTypes\ItemDesc.cs" />
     <Compile Include="ResourceTypes\MemFile.cs" />
-    <Compile Include="ResourceTypes\MipMap.cs" />
+    <Compile Include="ResourceTypes\Mipmap.cs" />
     <Compile Include="ResourceTypes\NAV_AIWORLD_DATA.cs" />
     <Compile Include="ResourceTypes\NAV_OBJ_DATA.cs" />
     <Compile Include="ResourceTypes\PREFAB.cs" />
