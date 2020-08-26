@@ -16,28 +16,7 @@ SDS data format is used by video-games (Mafia II and Mafia III); contains compre
 * Some content like tables or XML files are encrypted with <a href="https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm" target=_blank><i>TEA</i></a> in Classic version (decrypting is not implemented in this library)
 
 ## Usage
-```c#
-/* Init of SDS file */
-using (SdsFile sdsFile = SdsFile.FromFile(@"E:\Games\Steam\steamapps\common\Mafia II Definitive Edition\pc\sds\mapa\mapa_city.sds"))
-{
-    /* Extracts all resources from SDS into selected directory*/
-    sdsFile.ExportToDirectory(@"C:\Users\Mettak\Desktop");
-    
-    /* Extracts single resource to the selected path */
-    Texture texture = sdsFile.GetResourceByTypeAndName<Texture>("map.dds");
-    texture.Extract(@"C:\Users\Mettak\Desktop\map.dds");
-    
-    /* Extracts all textures from current SDS (if contains any) */
-    sdsFile.ExtractResourcesByType<Texture>(@"C:\Users\Mettak\Desktop\mapa_city\textures");
-    
-    /* Replaces data of the selected file */
-    MipMap mipMap = sdsFile.GetResourceByTypeAndName<MipMap>("map.dds");
-    mipMap.ReplaceData(@"C:\Users\Mettak\Desktop\new_map.dds");
-    
-    /* Saves modified SDS file to the selected path */
-    sdsFile.ExportToFile(@"C:\Users\Mettak\Desktop\modified.sds");
-}
-```
+Usage of this library is presented <a href="https://github.com/Mettak/sdslib/tree/master/sdslib.ConsoleAppSample" target=_blank>here</a> in console application sample project.
 
 ## Notice
 * sdslib and all contents within this repository and/or organisation, are not affiliated with 2K Czech, 2K Games, Hangar 13 Games or Take-Two Interactive Software Inc.
