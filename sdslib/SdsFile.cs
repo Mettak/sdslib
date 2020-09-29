@@ -62,6 +62,11 @@ namespace sdslib
         {
             get
             {
+                if (Header?.Version > 19)
+                {
+                    return null;
+                }
+
                 string xmlFile = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<xml>\n";
 
                 foreach (var resource in Resources)
@@ -99,108 +104,190 @@ namespace sdslib
             {
                 fileStream.Seek(file.Header.BlockTableOffset, SeekOrigin.Begin);
 
-                if (fileStream.ReadUInt32() != 1819952469U)
-                    throw new Exception("Invalid SDS file!");
+                #region Version 19
 
-                fileStream.Seek(5, SeekOrigin.Current);
-
-                using (MemoryStream decompressedData = new MemoryStream())
+                if (file.Header.Version == 19U)
                 {
-                    while (true)
+                    if (fileStream.ReadUInt32() != 1819952469U)
+                        throw new Exception("Invalid SDS file!");
+
+                    fileStream.Seek(5, SeekOrigin.Current);
+
+                    using (MemoryStream decompressedData = new MemoryStream())
                     {
-                        uint blockSize = fileStream.ReadUInt32();
-                        EDataBlockType blockType = (EDataBlockType)fileStream.ReadUInt8();
-
-                        if (blockSize == 0U)
-                            break;
-
-                        if (blockType == EDataBlockType.Compressed)
+                        while (true)
                         {
-                            fileStream.Seek(16, SeekOrigin.Current);
-                            uint compressedBlockSize = fileStream.ReadUInt32();
+                            uint blockSize = fileStream.ReadUInt32();
+                            EDataBlockType blockType = (EDataBlockType)fileStream.ReadUInt8();
 
-                            if (blockSize - 32U != compressedBlockSize)
-                                throw new Exception("Invalid block!");
+                            if (blockSize == 0U)
+                                break;
 
-                            fileStream.Seek(12, SeekOrigin.Current);
-                            byte[] compressedBlock = new byte[compressedBlockSize];
-                            fileStream.Read(compressedBlock, 0, compressedBlock.Length);
-
-                            ZOutputStream decompressStream = new ZOutputStream(decompressedData);
-                            decompressStream.Write(compressedBlock, 0, compressedBlock.Length);
-                            decompressStream.finish();
-                        }
-
-                        else if (blockType == EDataBlockType.Uncompressed)
-                        {
-                            byte[] decompressedBlock = new byte[blockSize];
-                            fileStream.Read(decompressedBlock, 0, decompressedBlock.Length);
-                            decompressedData.Write(decompressedBlock, 0, decompressedBlock.Length);
-                        }
-
-                        else
-                        {
-                            throw new Exception("Invalid block type!");
-                        }
-                    }
-
-                    decompressedData.SeekToStart();
-
-                    fileStream.Seek(file.Header.XmlOffset, SeekOrigin.Begin);
-                    byte[] xmlBytes = fileStream.ReadBytes((int)fileStream.Length - (int)fileStream.Position);
-                    using (MemoryStream memoryStream = new MemoryStream(xmlBytes))
-                    using (XmlReader xmlReader = XmlReader.Create(memoryStream))
-                    {
-                        ResourceInfo resourceInfo = new ResourceInfo();
-                        while (xmlReader.Read())
-                        {
-                            if (xmlReader.NodeType == XmlNodeType.Element)
+                            if (blockType == EDataBlockType.Compressed)
                             {
-                                if (xmlReader.Name == "TypeName")
-                                {
-                                    resourceInfo = new ResourceInfo();
-                                    var resourceType = (EResourceType)Enum.Parse(typeof(EResourceType), xmlReader.ReadElementContentAsString());
-                                    resourceInfo.Type = file.Header.ResourceTypes.First(x => x.Name == resourceType);
-                                }
+                                fileStream.Seek(16, SeekOrigin.Current);
+                                uint compressedBlockSize = fileStream.ReadUInt32();
 
-                                else if (xmlReader.Name == "SourceDataDescription")
-                                {
-                                    resourceInfo.SourceDataDescription = xmlReader.ReadElementContentAsString();
+                                if (blockSize - 32U != compressedBlockSize)
+                                    throw new Exception("Invalid block!");
 
-                                    uint resId = decompressedData.ReadUInt32();
-                                    if (resId != resourceInfo.Type.Id)
+                                fileStream.Seek(12, SeekOrigin.Current);
+                                byte[] compressedBlock = new byte[compressedBlockSize];
+                                fileStream.Read(compressedBlock, 0, compressedBlock.Length);
+
+                                ZOutputStream decompressStream = new ZOutputStream(decompressedData);
+                                decompressStream.Write(compressedBlock, 0, compressedBlock.Length);
+                                decompressStream.finish();
+                            }
+
+                            else if (blockType == EDataBlockType.Uncompressed)
+                            {
+                                byte[] decompressedBlock = new byte[blockSize];
+                                fileStream.Read(decompressedBlock, 0, decompressedBlock.Length);
+                                decompressedData.Write(decompressedBlock, 0, decompressedBlock.Length);
+                            }
+
+                            else
+                            {
+                                throw new Exception("Invalid block type!");
+                            }
+                        }
+
+                        decompressedData.SeekToStart();
+
+                        fileStream.Seek(file.Header.XmlOffset, SeekOrigin.Begin);
+                        byte[] xmlBytes = fileStream.ReadBytes((int)fileStream.Length - (int)fileStream.Position);
+                        using (MemoryStream memoryStream = new MemoryStream(xmlBytes))
+                        using (XmlReader xmlReader = XmlReader.Create(memoryStream))
+                        {
+                            ResourceInfo resourceInfo = new ResourceInfo();
+                            while (xmlReader.Read())
+                            {
+                                if (xmlReader.NodeType == XmlNodeType.Element)
+                                {
+                                    if (xmlReader.Name == "TypeName")
                                     {
-                                        throw new InvalidDataException();
+                                        resourceInfo = new ResourceInfo();
+                                        var resourceType = (EResourceType)Enum.Parse(typeof(EResourceType), xmlReader.ReadElementContentAsString());
+                                        resourceInfo.Type = file.Header.ResourceTypes.First(x => x.Name == resourceType);
                                     }
 
-                                    uint size = decompressedData.ReadUInt32();
-                                    ushort version = decompressedData.ReadUInt16();
-                                    uint slotRamRequired = decompressedData.ReadUInt32();
-                                    uint slotVRamRequired = decompressedData.ReadUInt32();
-                                    uint otherRamRequired = decompressedData.ReadUInt32();
-                                    uint otherVRamRequired = decompressedData.ReadUInt32();
-                                    uint checksum = decompressedData.ReadUInt32();
-                                    byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSize);
-
-                                    List<Type> resourceTypes = new List<Type>();
-                                    foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+                                    else if (xmlReader.Name == "SourceDataDescription")
                                     {
-                                        if (type.BaseType == typeof(Resource))
+                                        resourceInfo.SourceDataDescription = xmlReader.ReadElementContentAsString();
+
+                                        uint resId = decompressedData.ReadUInt32();
+                                        if (resId != resourceInfo.Type.Id)
                                         {
-                                            resourceTypes.Add(type);
+                                            throw new InvalidDataException();
                                         }
-                                    }
 
-                                    var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
-                                    var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
-                                    var resourecInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
-                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData, file._mapper });
-                                    file.Resources.Add(resourecInstance);
+                                        uint size = decompressedData.ReadUInt32();
+                                        ushort version = decompressedData.ReadUInt16();
+                                        uint slotRamRequired = decompressedData.ReadUInt32();
+                                        uint slotVRamRequired = decompressedData.ReadUInt32();
+                                        uint otherRamRequired = decompressedData.ReadUInt32();
+                                        uint otherVRamRequired = decompressedData.ReadUInt32();
+                                        uint checksum = decompressedData.ReadUInt32();
+                                        byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSizeV19);
+
+                                        List<Type> resourceTypes = new List<Type>();
+                                        foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+                                        {
+                                            if (type.BaseType == typeof(Resource))
+                                            {
+                                                resourceTypes.Add(type);
+                                            }
+                                        }
+
+                                        var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
+                                        var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
+                                        var resourecInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
+                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, null, null, rawData, file._mapper });
+                                        file.Resources.Add(resourecInstance);
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                #endregion
+
+                #region Version 20
+
+                else if (file.Header.Version == 20U)
+                {
+                    if (fileStream.ReadUInt32() != 1819952469U)
+                        throw new Exception("Invalid SDS file!");
+
+                    fileStream.Seek(5, SeekOrigin.Current);
+
+                    using (MemoryStream decompressedData = new MemoryStream())
+                    {
+                        while (true)
+                        {
+                            uint blockSize = fileStream.ReadUInt32();
+                            EDataBlockType blockType = (EDataBlockType)fileStream.ReadUInt8();
+
+                            if (blockSize == 0U)
+                                break;
+
+                            if (blockType == EDataBlockType.Compressed)
+                            {
+                                uint uncompressedSize = fileStream.ReadUInt32();
+                                fileStream.Seek(12, SeekOrigin.Current);
+                                uint compressedBlockSize = fileStream.ReadUInt32();
+
+                                if (blockSize - 128U != compressedBlockSize)
+                                    throw new Exception("Invalid block!");
+
+                                fileStream.Seek(108, SeekOrigin.Current);
+                                byte[] compressedBlock = new byte[compressedBlockSize];
+                                fileStream.Read(compressedBlock, 0, compressedBlock.Length);
+                                byte[] decompressed = Oodle.Decompress(compressedBlock, compressedBlock.Length, (int)uncompressedSize);
+                                decompressedData.Write(decompressed);
+                            }
+
+                            else if (blockType == EDataBlockType.Uncompressed)
+                            {
+                                byte[] decompressedBlock = new byte[blockSize];
+                                fileStream.Read(decompressedBlock, 0, decompressedBlock.Length);
+                                decompressedData.Write(decompressedBlock, 0, decompressedBlock.Length);
+                            }
+
+                            else
+                            {
+                                throw new Exception("Invalid block type!");
+                            }
+                        }
+
+                        decompressedData.SeekToStart();
+                        while(decompressedData.Position != decompressedData.Length)
+                        {
+                            uint resId = decompressedData.ReadUInt32();
+
+                            ResourceInfo resourceInfo = new ResourceInfo();
+                            resourceInfo.Type = file.Header.ResourceTypes.First(x => x.Id == resId);
+
+                            uint size = decompressedData.ReadUInt32();
+                            ushort version = decompressedData.ReadUInt16();
+                            uint slotRamRequired = decompressedData.ReadUInt32();
+                            uint slotVRamRequired = decompressedData.ReadUInt32();
+                            uint otherRamRequired = decompressedData.ReadUInt32();
+                            uint otherVRamRequired = decompressedData.ReadUInt32();
+                            uint unknown32 = decompressedData.ReadUInt32();
+                            uint unknown32_2 = decompressedData.ReadUInt32();
+                            uint checksum = decompressedData.ReadUInt32();
+                            byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSizeV20);
+
+                            file.Resources.Add(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, 
+                                unknown32, unknown32_2, rawData, null));
+                        }
+                    }
+                }
+
+                #endregion
             }
 
             return file;

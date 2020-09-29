@@ -38,37 +38,58 @@ namespace sdslib
             using (FileStream fileStream = new FileStream(sdsFilePath, FileMode.Open, FileAccess.Read))
             {
                 if (fileStream.Length < Constants.SdsHeader.StandardHeaderSize)
+                {
                     throw new InvalidDataException("Invalid file!");
+                }
 
                 if (fileStream.ReadString(sizeof(uint)) != "SDS")
+                {
                     throw new Exception("This file does not contain SDS header!");
+                }
 
                 header.Version = fileStream.ReadUInt32();
-                if (header.Version > Constants.SdsHeader.Version)
-                    throw new NotSupportedException("Unsupported version of SDS file!");
+                if (header.Version > Constants.SdsHeader.MaxSupportedVersion)
+                {
+                    throw new NotSupportedException($"Version: {header.Version}");
+                }
 
-                if (Enum.TryParse(fileStream.ReadString(sizeof(uint)), out EPlatform platform))
+                string platformString = fileStream.ReadString(sizeof(uint));
+                if (Enum.TryParse(platformString, out EPlatform platform))
                 {
                     header.Platform = platform;
                 }
 
                 else
                 {
-                    throw new InvalidDataException();
+                    throw new InvalidDataException(platformString);
                 }
 
-                if (header.Platform != EPlatform.PC)
-                    throw new NotSupportedException("Unsupported platform!");
+                if (header.Platform != EPlatform.PC) // In future will be added multiplatform support
+                {
+                    throw new NotSupportedException($"Platform: {platform}");
+                }
 
-                if (fileStream.ReadUInt32() != Constants.SdsHeader.Unknown32_C)
-                    throw new Exception("Bytes do not match.");
+                uint hash = fileStream.ReadUInt32();
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.WriteString("SDS", sizeof(uint));
+                    ms.WriteUInt32(header.Version);
+                    ms.WriteString(header.Platform.ToString(), sizeof(uint));
+                    var computedHash = FNV.Hash32(ms.ReadAllBytes());
+                    if (computedHash != hash)
+                    {
+                        throw new InvalidDataException("Checksum difference.");
+                    }
+                }
 
                 header.ResourceTypeTableOffset = fileStream.ReadUInt32();
                 header.BlockTableOffset = fileStream.ReadUInt32();
                 header.XmlOffset = fileStream.ReadUInt32();
 
                 if (header.XmlOffset == Constants.SdsHeader.Encrypted)
+                {
                     throw new NotSupportedException("This SDS file is encrypted.");
+                }
 
                 uint slotRamRequired = fileStream.ReadUInt32();
                 uint slotVRamRequired = fileStream.ReadUInt32();
@@ -76,12 +97,16 @@ namespace sdslib
                 uint otherVRamRequired = fileStream.ReadUInt32();
 
                 if (fileStream.ReadUInt32() != Constants.SdsHeader.Unknown32_2C)
+                {
                     throw new Exception("Bytes do not match.");
+                }
 
                 header.GameVersion = (EGameVersion)fileStream.ReadUInt64();
 
                 if (header.GameVersion != EGameVersion.Classic && header.GameVersion != EGameVersion.DefinitiveEdition)
+                {
                     throw new NotSupportedException(header.GameVersion.ToString());
+                }
 
                 // Skipping of null bytes
                 fileStream.Seek(sizeof(ulong), SeekOrigin.Current);

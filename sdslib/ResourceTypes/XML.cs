@@ -211,7 +211,7 @@ namespace sdslib.ResourceTypes
         }
 
         public new static XML Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired,
-            uint otherRamRequired, uint otherVRamRequired, byte[] rawData, IMapper mapper)
+            uint otherRamRequired, uint otherVRamRequired, uint? unknown32, uint? unknown32_2, byte[] rawData, IMapper mapper)
         {
             XML xml = new XML
             {
@@ -220,7 +220,9 @@ namespace sdslib.ResourceTypes
                 SlotRamRequired = slotRamRequired,
                 SlotVRamRequired = slotVRamRequired,
                 OtherRamRequired = otherRamRequired,
-                OtherVRamRequired = otherVRamRequired
+                OtherVRamRequired = otherVRamRequired,
+                Unknown32 = unknown32,
+                Unknown32_2 = unknown32_2
             };
 
             using (MemoryStream memory = new MemoryStream(rawData))

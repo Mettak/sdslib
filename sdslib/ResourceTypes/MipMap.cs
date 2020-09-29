@@ -19,9 +19,9 @@ namespace sdslib.ResourceTypes
         [JsonIgnore]
         public byte Unknown8 { get; set; } = 0;
 
-        public new static Mipmap Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData, IMapper mapper)
+        public new static Mipmap Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, uint? unknown32, uint? unknown32_2, byte[] rawData, IMapper mapper)
         {
-            Mipmap texture = mapper.Map<Mipmap>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData, null));
+            Mipmap texture = mapper.Map<Mipmap>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, unknown32, unknown32_2, rawData, null));
             using (MemoryStream memory = new MemoryStream(rawData))
             {
                 memory.Seek(sizeof(ulong), SeekOrigin.Begin);

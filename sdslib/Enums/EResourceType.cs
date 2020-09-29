@@ -30,6 +30,8 @@
         Texture,
         Translokator,
         VertexBufferPool,
-        XML
+        XML,
+        Flash,
+        SystemObjectDatabase
     }
 }

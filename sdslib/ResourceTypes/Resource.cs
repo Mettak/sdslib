@@ -29,7 +29,12 @@ namespace sdslib.ResourceTypes
         {
             get
             {
-                return Constants.Resource.StandardHeaderSize + (uint)Serialize().Length;
+                if (Unknown32.HasValue && Unknown32_2.HasValue)
+                {
+                    return Constants.Resource.StandardHeaderSizeV20 + (uint)Serialize().Length;
+                }
+
+                return Constants.Resource.StandardHeaderSizeV19 + (uint)Serialize().Length;
             }
         }
 
@@ -42,6 +47,10 @@ namespace sdslib.ResourceTypes
         public uint OtherRamRequired { get; set; }
 
         public uint OtherVRamRequired { get; set; }
+         
+        public uint? Unknown32 { get; set; }
+
+        public uint? Unknown32_2 { get; set; }
 
         [JsonIgnore]
         public uint Checksum
@@ -57,6 +66,17 @@ namespace sdslib.ResourceTypes
                     ms.WriteUInt32(SlotVRamRequired);
                     ms.WriteUInt32(OtherRamRequired);
                     ms.WriteUInt32(OtherVRamRequired);
+                    
+                    if (Unknown32.HasValue)
+                    {
+                        ms.WriteUInt32(Unknown32.Value);
+                    }
+
+                    if (Unknown32_2.HasValue)
+                    {
+                        ms.WriteUInt32(Unknown32_2.Value);
+                    }
+
                     return FNV.Hash32(ms.ReadAllBytes());
                 }
             }
@@ -65,7 +85,8 @@ namespace sdslib.ResourceTypes
         [JsonIgnore]
         public virtual byte[] Data { get; set; }
 
-        public static Resource Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData, IMapper mapper)
+        public static Resource Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired,
+            uint? unknown32, uint? unknown32_2, byte[] rawData, IMapper mapper)
         {
             return new Resource
             {
@@ -76,6 +97,8 @@ namespace sdslib.ResourceTypes
                 SlotVRamRequired = slotVRamRequired,
                 OtherRamRequired = otherRamRequired,
                 OtherVRamRequired = otherVRamRequired,
+                Unknown32 = unknown32,
+                Unknown32_2 = unknown32_2,
                 Data = rawData
             };
         }

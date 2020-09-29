@@ -58,6 +58,9 @@
     <Compile Include="Enums\EGameVersion.cs" />
     <Compile Include="Enums\EResourceType.cs" />
     <Compile Include="MappingProfile.cs" />
+    <Compile Include="Oodle\Oodle.cs" />
+    <Compile Include="Oodle\OodleCompressionLevel.cs" />
+    <Compile Include="Oodle\OodleFormat.cs" />
     <Compile Include="ResourceTypes\Actors.cs" />
     <Compile Include="ResourceTypes\AnimalTrafficPaths.cs" />
     <Compile Include="ResourceTypes\AnimatedTexture.cs" />
@@ -100,14 +103,14 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ContentWithTargetPath  Include="Libs\oo2core_3_win64.dll">
+    <ContentWithTargetPath Include="Libs\oo2core_3_win64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>oo2core_3_win64.dll</TargetPath>
-    </ContentWithTargetPath >
-    <ContentWithTargetPath  Include="Libs\oo2core_8_win64.dll">
+    </ContentWithTargetPath>
+    <ContentWithTargetPath Include="Libs\oo2core_8_win64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>oo2core_8_win64.dll</TargetPath>
-    </ContentWithTargetPath >
+    </ContentWithTargetPath>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -9,9 +9,9 @@ namespace sdslib.ResourceTypes
 {
     public class IndexBufferPool : Resource
     {
-        public new static IndexBufferPool Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, byte[] rawData, IMapper mapper)
+        public new static IndexBufferPool Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, uint? unknown32, uint? unknown32_2, byte[] rawData, IMapper mapper)
         {
-            IndexBufferPool type = mapper.Map<IndexBufferPool>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, rawData, null));
+            IndexBufferPool type = mapper.Map<IndexBufferPool>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, unknown32, unknown32_2, rawData, null));
             return type;
         }
     }
