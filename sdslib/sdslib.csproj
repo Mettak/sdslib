@@ -99,6 +99,15 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ContentWithTargetPath  Include="Libs\oo2core_3_win64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>oo2core_3_win64.dll</TargetPath>
+    </ContentWithTargetPath >
+    <ContentWithTargetPath  Include="Libs\oo2core_8_win64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>oo2core_8_win64.dll</TargetPath>
+    </ContentWithTargetPath >
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
