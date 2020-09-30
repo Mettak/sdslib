@@ -38,6 +38,8 @@ namespace sdslib
             CreateMap<Resource, XML>();
             CreateMap<Resource, Flash>();
             CreateMap<Resource, SystemObjectDatabase>();
+            CreateMap<Resource, Generic>();
+            CreateMap<Resource, hkAnimation>();
         }
     }
 }

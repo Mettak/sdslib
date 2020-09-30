@@ -32,6 +32,8 @@
         VertexBufferPool,
         XML,
         Flash,
-        SystemObjectDatabase
+        SystemObjectDatabase,
+        Generic,
+        hkAnimation
     }
 }

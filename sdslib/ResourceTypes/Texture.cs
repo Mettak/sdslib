@@ -15,9 +15,10 @@ namespace sdslib.ResourceTypes
                 return FNV.Hash64(Encoding.UTF8.GetBytes(Info.SourceDataDescription));
             }
         }
+        
+        public ulong? Unknown64 { get; set; }
 
-        [JsonIgnore]
-        public byte Unknown8 { get; set; } = 0;
+        public byte? Unknown8 { get; set; }
 
         public bool HasMipMap { get; set; }
 
@@ -26,8 +27,22 @@ namespace sdslib.ResourceTypes
             Texture texture = mapper.Map<Texture>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, unknown32, unknown32_2, rawData, null));
             using (MemoryStream memory = new MemoryStream(rawData))
             {
-                memory.Seek(sizeof(ulong), SeekOrigin.Begin);
-                texture.Unknown8 = memory.ReadUInt8();
+                if (version == 2)
+                {
+                    memory.Seek(sizeof(ulong), SeekOrigin.Begin);
+                }
+
+                else if (version == 3)
+                {
+                    texture.Unknown64 = memory.ReadUInt64();
+                    texture.Info.SourceDataDescription = $"{texture.Unknown64}.dds";
+                }
+
+                if (version == 2)
+                {
+                    texture.Unknown8 = memory.ReadUInt8();
+                }
+
                 texture.HasMipMap = System.Convert.ToBoolean(memory.ReadUInt8());
                 texture.Data = memory.ReadAllBytesFromCurrentPosition();
             }
@@ -38,8 +53,17 @@ namespace sdslib.ResourceTypes
         {
             using (MemoryStream memory = new MemoryStream())
             {
-                memory.WriteUInt64(NameHash);
-                memory.WriteUInt8(Unknown8);
+                if (Version == 2 && Unknown8.HasValue)
+                {
+                    memory.WriteUInt64(NameHash);
+                    memory.WriteUInt8(Unknown8.Value);
+                }
+
+                else if (Version == 3 && Unknown64.HasValue)
+                {
+                    memory.WriteUInt64(Unknown64.Value);
+                }
+
                 memory.WriteUInt8(System.Convert.ToByte(HasMipMap));
                 memory.Write(Data, 0, Data.Length);
                 return memory.ReadAllBytes();

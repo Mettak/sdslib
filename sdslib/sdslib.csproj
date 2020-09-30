@@ -64,6 +64,7 @@
     <Compile Include="ResourceTypes\Actors.cs" />
     <Compile Include="ResourceTypes\AnimalTrafficPaths.cs" />
     <Compile Include="ResourceTypes\AnimatedTexture.cs" />
+    <Compile Include="ResourceTypes\hkAnimation.cs" />
     <Compile Include="ResourceTypes\Animation2.cs" />
     <Compile Include="ResourceTypes\AudioSectors.cs" />
     <Compile Include="ResourceTypes\Collisions.cs" />
@@ -75,6 +76,7 @@
     <Compile Include="ResourceTypes\FrameResource.cs" />
     <Compile Include="ResourceTypes\FxActor.cs" />
     <Compile Include="ResourceTypes\FxAnimSet.cs" />
+    <Compile Include="ResourceTypes\Generic.cs" />
     <Compile Include="ResourceTypes\IndexBufferPool.cs" />
     <Compile Include="ResourceTypes\IResource.cs" />
     <Compile Include="ResourceTypes\ItemDesc.cs" />
