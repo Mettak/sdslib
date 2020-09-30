@@ -161,6 +161,16 @@ namespace sdslib
                         using (XmlReader xmlReader = XmlReader.Create(memoryStream))
                         {
                             ResourceInfo resourceInfo = new ResourceInfo();
+
+                            List<Type> resourceTypes = new List<Type>();
+                            foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+                            {
+                                if (type.BaseType == typeof(Resource))
+                                {
+                                    resourceTypes.Add(type);
+                                }
+                            }
+
                             while (xmlReader.Read())
                             {
                                 if (xmlReader.NodeType == XmlNodeType.Element)
@@ -190,15 +200,6 @@ namespace sdslib
                                         uint otherVRamRequired = decompressedData.ReadUInt32();
                                         uint checksum = decompressedData.ReadUInt32();
                                         byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSizeV19);
-
-                                        List<Type> resourceTypes = new List<Type>();
-                                        foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
-                                        {
-                                            if (type.BaseType == typeof(Resource))
-                                            {
-                                                resourceTypes.Add(type);
-                                            }
-                                        }
 
                                         var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
                                         var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
@@ -262,6 +263,15 @@ namespace sdslib
                             }
                         }
 
+                        List<Type> resourceTypes = new List<Type>();
+                        foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+                        {
+                            if (type.BaseType == typeof(Resource))
+                            {
+                                resourceTypes.Add(type);
+                            }
+                        }
+
                         decompressedData.SeekToStart();
                         while(decompressedData.Position != decompressedData.Length)
                         {
@@ -281,8 +291,11 @@ namespace sdslib
                             uint checksum = decompressedData.ReadUInt32();
                             byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSizeV20);
 
-                            file.Resources.Add(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, 
-                                unknown32, unknown32_2, rawData, null));
+                            var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
+                            var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
+                            var resourceInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
+                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, unknown32, unknown32_2, rawData, file._mapper });
+                            file.Resources.Add(resourceInstance);
                         }
                     }
                 }
@@ -351,7 +364,17 @@ namespace sdslib
                 sds.Seek(currentPosition, SeekOrigin.Begin);
 
                 sds.WriteUInt32(1819952469U);
-                sds.WriteUInt32(Constants.SdsHeader.BlockSize);
+
+                if (Header?.Version == 19)
+                {
+                    sds.WriteUInt32(Constants.SdsHeader.MaxBlockSizeV19);
+                }
+
+                else if (Header?.Version == 20)
+                {
+                    sds.WriteUInt32(Constants.SdsHeader.MaxBlockSizeV20);
+                }
+
                 sds.WriteUInt8(4);
 
                 bool first = true;
@@ -362,26 +385,68 @@ namespace sdslib
                     if (first || block.Length >= 10240)
                     {
                         byte[] blockData = block.ReadAllBytes();
-                        MemoryStream compressedBlock = new MemoryStream();
-                        ZOutputStream compressStream = new ZOutputStream(compressedBlock,
-                            zlibConst.Z_BEST_COMPRESSION);
-                        compressStream.Write(blockData, 0, blockData.Length);
-                        compressStream.finish();
 
-                        sds.WriteUInt32((uint)compressStream.TotalOut + 32U);
-                        sds.WriteUInt8((byte)EDataBlockType.Compressed);
-                        sds.WriteUInt32((uint)block.Length);
+                        #region Version 19
 
-                        sds.WriteUInt32(32);
-                        sds.WriteUInt32(81920);
-                        sds.WriteUInt32(135200769);
+                        if (Header?.Version == 19)
+                        {
+                            MemoryStream compressedBlock = new MemoryStream();
+                            ZOutputStream compressStream = new ZOutputStream(compressedBlock,
+                                zlibConst.Z_BEST_COMPRESSION);
+                            compressStream.Write(blockData, 0, blockData.Length);
+                            compressStream.finish();
 
-                        sds.WriteUInt32((uint)compressStream.TotalOut);
-                        sds.WriteUInt64(0);
-                        sds.WriteUInt32(0);
+                            sds.WriteUInt32((uint)compressStream.TotalOut + 32U);
+                            sds.WriteUInt8((byte)EDataBlockType.Compressed);
+                            sds.WriteUInt32((uint)block.Length);
 
-                        compressedBlock.SeekToStart();
-                        sds.Write(compressedBlock.ReadAllBytes());
+                            sds.WriteUInt32(32);
+                            sds.WriteUInt32(81920);
+                            sds.WriteUInt32(135200769);
+
+                            sds.WriteUInt32((uint)compressStream.TotalOut);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt32(0);
+
+                            compressedBlock.SeekToStart();
+                            sds.Write(compressedBlock.ReadAllBytes());
+                        }
+
+                        #endregion
+
+                        #region Version 20
+
+                        else if (Header?.Version == 20)
+                        {
+                            byte[] compressed = Oodle.Compress(blockData, blockData.Length);
+                            sds.WriteUInt32((uint)compressed.Length + 128U);
+                            sds.WriteUInt8((byte)EDataBlockType.Compressed);
+                            sds.WriteUInt32((uint)block.Length);
+
+                            sds.WriteUInt32(128);
+                            sds.WriteUInt32(65537);
+                            sds.WriteUInt32((uint)block.Length);
+
+                            sds.WriteUInt32((uint)compressed.Length);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt64(0);
+                            sds.WriteUInt32(0);
+
+                            sds.Write(compressed);
+                        }
+
+                        #endregion
                     }
 
                     else
@@ -397,10 +462,21 @@ namespace sdslib
                 sds.WriteUInt32(0);
                 sds.WriteUInt8(0);
 
-                currentPosition = sds.Position;
-                Header.XmlOffset = (uint)currentPosition;
-                sds.Seek(xmlOffsetPosition, SeekOrigin.Begin);
-                sds.WriteUInt32((uint)currentPosition);
+                if (Header?.Version == 20U)
+                {
+                    Header.XmlOffset = 0;
+                    sds.Seek(xmlOffsetPosition, SeekOrigin.Begin);
+                    sds.WriteUInt32(Header.XmlOffset);
+                }
+
+                else
+                {
+                    currentPosition = sds.Position;
+                    Header.XmlOffset = (uint)currentPosition;
+                    sds.Seek(xmlOffsetPosition, SeekOrigin.Begin);
+                    sds.WriteUInt32((uint)currentPosition);
+                }
+
                 sds.Seek(headerChecksumPosition, SeekOrigin.Begin);
 
                 using (MemoryStream ms = new MemoryStream())
@@ -419,8 +495,11 @@ namespace sdslib
                     sds.WriteUInt32(FNV.Hash32(ms.ReadAllBytes()));
                 }
 
-                sds.Seek(currentPosition, SeekOrigin.Begin);
-                sds.WriteString(XmlString);
+                if (Header?.Version == 19U)
+                {
+                    sds.Seek(currentPosition, SeekOrigin.Begin);
+                    sds.WriteString(XmlString);
+                }
             }
         }
 
@@ -487,18 +566,46 @@ namespace sdslib
                 mergedData.WriteUInt32(resource.SlotVRamRequired);
                 mergedData.WriteUInt32(resource.OtherRamRequired);
                 mergedData.WriteUInt32(resource.OtherVRamRequired);
+
+                if (resource.Unknown32.HasValue &&
+                    resource.Unknown32_2.HasValue)
+                {
+                    mergedData.WriteUInt32(resource.Unknown32.Value);
+                    mergedData.WriteUInt32(resource.Unknown32_2.Value);
+                }
+
                 mergedData.WriteUInt32(resource.Checksum);
                 mergedData.Write(resource.Serialize());
             }
 
             mergedData.SeekToStart();
 
-            int numberOfBlocks = (int)mergedData.Length / Constants.SdsHeader.BlockSize;
+            int numberOfBlocks = (int)mergedData.Length;
+            if (Header?.Version == 19U)
+            {
+                numberOfBlocks /= Constants.SdsHeader.MaxBlockSizeV19;
+            }
+
+            else if (Header?.Version == 20U)
+            {
+                numberOfBlocks /= Constants.SdsHeader.MaxBlockSizeV20;
+            }
+
             List<MemoryStream> dataBlocks = new List<MemoryStream>();
             for (int i = 0; i < numberOfBlocks; i++)
             {
                 MemoryStream dataBlock = new MemoryStream();
-                dataBlock.Write(mergedData.ReadBytes(Constants.SdsHeader.BlockSize));
+
+                if (Header?.Version == 19U)
+                {
+                    dataBlock.Write(mergedData.ReadBytes(Constants.SdsHeader.MaxBlockSizeV19));
+                }
+
+                else if (Header?.Version == 20U)
+                {
+                    dataBlock.Write(mergedData.ReadBytes(Constants.SdsHeader.MaxBlockSizeV20));
+                }
+
                 dataBlocks.Add(dataBlock);
             }
 

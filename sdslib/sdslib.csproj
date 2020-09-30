@@ -70,6 +70,7 @@
     <Compile Include="ResourceTypes\Cutscene.cs" />
     <Compile Include="ResourceTypes\Effects.cs" />
     <Compile Include="ResourceTypes\EntityDataStorage.cs" />
+    <Compile Include="ResourceTypes\Flash.cs" />
     <Compile Include="ResourceTypes\FrameNameTable.cs" />
     <Compile Include="ResourceTypes\FrameResource.cs" />
     <Compile Include="ResourceTypes\FxActor.cs" />
@@ -89,6 +90,7 @@
     <Compile Include="ResourceTypes\Sound.cs" />
     <Compile Include="ResourceTypes\SoundTable.cs" />
     <Compile Include="ResourceTypes\Speech.cs" />
+    <Compile Include="ResourceTypes\SystemObjectDatabase.cs" />
     <Compile Include="ResourceTypes\Table.cs" />
     <Compile Include="ResourceTypes\Texture.cs" />
     <Compile Include="ResourceTypes\Translokator.cs" />

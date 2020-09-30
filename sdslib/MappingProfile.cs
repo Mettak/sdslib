@@ -36,6 +36,8 @@ namespace sdslib
             CreateMap<Resource, Translokator>();
             CreateMap<Resource, VertexBufferPool>();
             CreateMap<Resource, XML>();
+            CreateMap<Resource, Flash>();
+            CreateMap<Resource, SystemObjectDatabase>();
         }
     }
 }

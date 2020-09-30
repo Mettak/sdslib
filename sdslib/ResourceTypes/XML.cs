@@ -233,7 +233,7 @@ namespace sdslib.ResourceTypes
 
                 if (xml.Path != xml.Info.SourceDataDescription)
                 {
-                    throw new InvalidDataException();
+                    xml.Info.SourceDataDescription = xml.Path;
                 }
 
                 xml.Unknown16 = memory.ReadUInt16();

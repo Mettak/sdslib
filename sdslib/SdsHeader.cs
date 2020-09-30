@@ -37,20 +37,20 @@ namespace sdslib
 
             using (FileStream fileStream = new FileStream(sdsFilePath, FileMode.Open, FileAccess.Read))
             {
+                if (fileStream.ReadString(sizeof(uint)) != "SDS")
+                {
+                    throw new InvalidDataException("This file does not contain SDS header!");
+                }
+
                 if (fileStream.Length < Constants.SdsHeader.StandardHeaderSize)
                 {
                     throw new InvalidDataException("Invalid file!");
                 }
 
-                if (fileStream.ReadString(sizeof(uint)) != "SDS")
-                {
-                    throw new Exception("This file does not contain SDS header!");
-                }
-
                 header.Version = fileStream.ReadUInt32();
                 if (header.Version > Constants.SdsHeader.MaxSupportedVersion)
                 {
-                    throw new NotSupportedException($"Version: {header.Version}");
+                    throw new NotSupportedException($"Version {header.Version} not supported");
                 }
 
                 string platformString = fileStream.ReadString(sizeof(uint));
@@ -66,7 +66,7 @@ namespace sdslib
 
                 if (header.Platform != EPlatform.PC) // In future will be added multiplatform support
                 {
-                    throw new NotSupportedException($"Platform: {platform}");
+                    throw new NotSupportedException($"Platform {platform} not supported");
                 }
 
                 uint hash = fileStream.ReadUInt32();
@@ -86,7 +86,8 @@ namespace sdslib
                 header.BlockTableOffset = fileStream.ReadUInt32();
                 header.XmlOffset = fileStream.ReadUInt32();
 
-                if (header.XmlOffset == Constants.SdsHeader.Encrypted)
+                if (header.Version == 19U && 
+                    header.XmlOffset == Constants.SdsHeader.Encrypted)
                 {
                     throw new NotSupportedException("This SDS file is encrypted.");
                 }
