@@ -382,7 +382,7 @@ namespace sdslib
                 {
                     block.SeekToStart();
 
-                    if (first || block.Length >= 10240)
+                    if ((first || block.Length >= 10240) && Header?.Version != 20U)
                     {
                         byte[] blockData = block.ReadAllBytes();
 
@@ -416,35 +416,35 @@ namespace sdslib
 
                         #region Version 20
 
-                        else if (Header?.Version == 20)
-                        {
-                            byte[] compressed = Oodle.Compress(blockData, blockData.Length);
-                            sds.WriteUInt32((uint)compressed.Length + 128U);
-                            sds.WriteUInt8((byte)EDataBlockType.Compressed);
-                            sds.WriteUInt32((uint)block.Length);
+                        //else if (Header?.Version == 20)
+                        //{
+                        //    byte[] compressed = Oodle.Compress(blockData, blockData.Length);
+                        //    sds.WriteUInt32((uint)compressed.Length + 128U);
+                        //    sds.WriteUInt8((byte)EDataBlockType.Compressed);
+                        //    sds.WriteUInt32((uint)block.Length);
 
-                            sds.WriteUInt32(128);
-                            sds.WriteUInt32(65537);
-                            sds.WriteUInt32((uint)block.Length);
+                        //    sds.WriteUInt32(128);
+                        //    sds.WriteUInt32(65537);
+                        //    sds.WriteUInt32((uint)block.Length);
 
-                            sds.WriteUInt32((uint)compressed.Length);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt64(0);
-                            sds.WriteUInt32(0);
+                        //    sds.WriteUInt32((uint)compressed.Length);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt64(0);
+                        //    sds.WriteUInt32(0);
 
-                            sds.Write(compressed);
-                        }
+                        //    sds.Write(compressed);
+                        //}
 
                         #endregion
                     }

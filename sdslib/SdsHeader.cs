@@ -11,8 +11,7 @@ namespace sdslib
     {
         public string Name { get; set; }
 
-        [JsonIgnore]
-        public uint Version { get; set; } = 19;
+        public uint Version { get; set; }
 
         public EPlatform Platform { get; set; } = EPlatform.PC;
 
