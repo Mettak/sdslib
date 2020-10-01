@@ -34,12 +34,11 @@ namespace sdslib
 
         public EGameVersion GameVersion { get; set; } = EGameVersion.DefinitiveEdition;
 
-        public List<ResourceType> ResourceTypes { get; set; } = new List<ResourceType>();
+        public ResourceTypeList ResourceTypes { get; set; } = new ResourceTypeList();
 
         public static SdsHeader FromFile(string sdsFilePath)
         {
             SdsHeader header = new SdsHeader();
-
             header.Name = Path.GetFileName(sdsFilePath);
 
             using (FileStream fileStream = new FileStream(sdsFilePath, FileMode.Open, FileAccess.Read))

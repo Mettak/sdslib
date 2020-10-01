@@ -3,7 +3,7 @@ using sdslib.Enums;
 
 namespace sdslib.ResourceTypes
 {
-    public class ResourceType
+    public sealed class ResourceType
     {
         public uint Id { get; set; }
 

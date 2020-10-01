@@ -23,7 +23,7 @@ namespace sdslib
 
         private readonly IMapper _mapper;
 
-        public List<Resource> Resources { get; set; } = new List<Resource>();
+        public ResourceList<Resource> Resources { get; private set; } = new ResourceList<Resource>();
 
         public SdsHeader Header { get; set; } = new SdsHeader();
 
@@ -63,6 +63,11 @@ namespace sdslib
             }
         }
 
+        /// <summary>
+        /// Xml used in version 19 at the end of the file.
+        /// Contains resources with some basic info.
+        /// Newer versions returns null.
+        /// </summary>
         [JsonIgnore]
         public string XmlString
         {
@@ -211,7 +216,7 @@ namespace sdslib
                                         var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
                                         var resourecInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
                                         resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, null, null, rawData, file._mapper });
-                                        file.Resources.Add(resourecInstance);
+                                        file.AddResource(resourecInstance);
                                     }
                                 }
                             }
@@ -303,7 +308,7 @@ namespace sdslib
                             var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
                             var resourceInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
                                         resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, unknown32, unknown32_2, rawData, file._mapper });
-                            file.Resources.Add(resourceInstance);
+                            file.AddResource(resourceInstance);
                         }
                     }
                 }
@@ -628,18 +633,9 @@ namespace sdslib
             return dataBlocks;
         }
 
-        public void AddResource<T>(T resource) where T : Resource
+        public void AddResource(Resource resource)
         {
-            // Later will be replaced with an abstract class
-            if (typeof(T).BaseType != typeof(Resource))
-            {
-                throw new Exception("Cannot add base type with this function.");
-            }
-
-            string typeName = resource.GetType().Name;
-
-            resource.Info.Type = Header.ResourceTypes.First(x => x.ToString() == typeName);
-            Resources.Add(resource);
+            Resources.Add(resource, Header?.ResourceTypes);
         }
 
         public T GetResourceByTypeAndName<T>(string name) where T : Resource
@@ -660,22 +656,7 @@ namespace sdslib
 
         public void AddResourceType(EResourceType resourceType)
         {
-            if (Header.ResourceTypes.Any(x => x.Name == resourceType))
-            {
-                throw new Exception("SDS file already contains this resource type");
-            }
-
-            uint index = 0;
-            if (Header.ResourceTypes.Any())
-            {
-                index = Header.ResourceTypes.Last().Id + 1;
-            }
-
-            Header.ResourceTypes.Add(new ResourceType
-            {
-                Id = index,
-                Name = resourceType
-            });
+            Header?.ResourceTypes.Add(resourceType);
         }
 
         public void Dispose()
