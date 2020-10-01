@@ -38,7 +38,6 @@ namespace sdslib.ResourceTypes
 
         public override string ToString()
         {
-            
             return Name.ToString();
         }
     }

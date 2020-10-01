@@ -51,7 +51,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
     <Compile Include="FNV.cs" />
     <Compile Include="Enums\EDataBlockType.cs" />
     <Compile Include="Enums\EPlatform.cs" />

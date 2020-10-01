@@ -6,6 +6,10 @@ namespace sdslib.ResourceTypes
 {
     public class Resource : IResource
     {
+        public const int StandardHeaderSizeV19 = 30;
+
+        public const int StandardHeaderSizeV20 = 38;
+
         public string Guid { get; set; } = System.Guid.NewGuid().ToString();
 
         public ResourceInfo Info { get; set; } = new ResourceInfo();
@@ -31,10 +35,10 @@ namespace sdslib.ResourceTypes
             {
                 if (Unknown32.HasValue && Unknown32_2.HasValue)
                 {
-                    return Constants.Resource.StandardHeaderSizeV20 + (uint)Serialize().Length;
+                    return StandardHeaderSizeV20 + (uint)Serialize().Length;
                 }
 
-                return Constants.Resource.StandardHeaderSizeV19 + (uint)Serialize().Length;
+                return StandardHeaderSizeV19 + (uint)Serialize().Length;
             }
         }
 

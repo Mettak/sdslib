@@ -9,6 +9,14 @@ namespace sdslib
 {
     public class SdsHeader
     {
+        public const int HeaderSize = 72;
+
+        public const uint MaxSupportedVersion = 20U;
+
+        public const uint Encrypted = 1049068U;
+
+        public const uint Unknown32_2C = 1U;
+
         public string Name { get; set; }
 
         public uint Version { get; set; }
@@ -36,18 +44,18 @@ namespace sdslib
 
             using (FileStream fileStream = new FileStream(sdsFilePath, FileMode.Open, FileAccess.Read))
             {
+                if (fileStream.Length < HeaderSize)
+                {
+                    throw new InvalidDataException("Invalid file!");
+                }
+
                 if (fileStream.ReadString(sizeof(uint)) != "SDS")
                 {
                     throw new InvalidDataException("This file does not contain SDS header!");
                 }
 
-                if (fileStream.Length < Constants.SdsHeader.StandardHeaderSize)
-                {
-                    throw new InvalidDataException("Invalid file!");
-                }
-
                 header.Version = fileStream.ReadUInt32();
-                if (header.Version > Constants.SdsHeader.MaxSupportedVersion)
+                if (header.Version > MaxSupportedVersion)
                 {
                     throw new NotSupportedException($"Version {header.Version} not supported");
                 }
@@ -85,8 +93,8 @@ namespace sdslib
                 header.BlockTableOffset = fileStream.ReadUInt32();
                 header.XmlOffset = fileStream.ReadUInt32();
 
-                if (header.Version == 19U && 
-                    header.XmlOffset == Constants.SdsHeader.Encrypted)
+                if (header.Version == 19U &&
+                    header.XmlOffset == Encrypted)
                 {
                     throw new NotSupportedException("This SDS file is encrypted.");
                 }
@@ -96,7 +104,7 @@ namespace sdslib
                 uint otherRamRequired = fileStream.ReadUInt32();
                 uint otherVRamRequired = fileStream.ReadUInt32();
 
-                if (fileStream.ReadUInt32() != Constants.SdsHeader.Unknown32_2C)
+                if (fileStream.ReadUInt32() != SdsHeader.Unknown32_2C)
                 {
                     throw new Exception("Bytes do not match.");
                 }
@@ -124,7 +132,7 @@ namespace sdslib
                     ms.WriteUInt32(slotVRamRequired);
                     ms.WriteUInt32(otherRamRequired);
                     ms.WriteUInt32(otherVRamRequired);
-                    ms.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
+                    ms.WriteUInt32(Unknown32_2C);
                     ms.WriteUInt64((ulong)header.GameVersion);
                     ms.WriteUInt64(0);
                     ms.WriteUInt32(numberOfFiles);

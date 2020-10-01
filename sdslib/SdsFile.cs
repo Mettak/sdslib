@@ -15,6 +15,12 @@ namespace sdslib
 {
     public class SdsFile : IDisposable
     {
+        private const uint UEzl = 1819952469U;
+
+        private const int MaxBlockSizeV19 = 16384;
+
+        private const int MaxBlockSizeV20 = 65536;
+
         private readonly IMapper _mapper;
 
         public List<Resource> Resources { get; set; } = new List<Resource>();
@@ -108,7 +114,7 @@ namespace sdslib
 
                 if (file.Header.Version == 19U)
                 {
-                    if (fileStream.ReadUInt32() != 1819952469U)
+                    if (fileStream.ReadUInt32() != UEzl)
                         throw new Exception("Invalid SDS file!");
 
                     fileStream.Seek(5, SeekOrigin.Current);
@@ -199,7 +205,7 @@ namespace sdslib
                                         uint otherRamRequired = decompressedData.ReadUInt32();
                                         uint otherVRamRequired = decompressedData.ReadUInt32();
                                         uint checksum = decompressedData.ReadUInt32();
-                                        byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSizeV19);
+                                        byte[] rawData = decompressedData.ReadBytes((int)size - Resource.StandardHeaderSizeV19);
 
                                         var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
                                         var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
@@ -219,7 +225,7 @@ namespace sdslib
 
                 else if (file.Header.Version == 20U)
                 {
-                    if (fileStream.ReadUInt32() != 1819952469U)
+                    if (fileStream.ReadUInt32() != UEzl)
                         throw new Exception("Invalid SDS file!");
 
                     fileStream.Seek(5, SeekOrigin.Current);
@@ -241,7 +247,9 @@ namespace sdslib
                                 uint compressedBlockSize = fileStream.ReadUInt32();
 
                                 if (blockSize - 128U != compressedBlockSize)
+                                {
                                     throw new Exception("Invalid block!");
+                                }
 
                                 fileStream.Seek(108, SeekOrigin.Current);
                                 byte[] compressedBlock = new byte[compressedBlockSize];
@@ -289,7 +297,7 @@ namespace sdslib
                             uint otherRamRequired = decompressedData.ReadUInt32();
                             uint otherVRamRequired = decompressedData.ReadUInt32();
                             uint checksum = decompressedData.ReadUInt32();
-                            byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSizeV20);
+                            byte[] rawData = decompressedData.ReadBytes((int)size - Resource.StandardHeaderSizeV20);
 
                             var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
                             var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
@@ -327,7 +335,7 @@ namespace sdslib
                     sds.WriteUInt32(FNV.Hash32(ms.ReadAllBytes()));
                 }
 
-                Header.ResourceTypeTableOffset = Constants.SdsHeader.StandardHeaderSize;
+                Header.ResourceTypeTableOffset = SdsHeader.HeaderSize;
                 sds.WriteUInt32(Header.ResourceTypeTableOffset);
                 blockTableOffsetPosition = sds.Position;
                 sds.Seek(sizeof(uint), SeekOrigin.Current);
@@ -339,7 +347,7 @@ namespace sdslib
                 sds.WriteUInt32(OtherRamRequired);
                 sds.WriteUInt32(OtherVRamRequired);
 
-                sds.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
+                sds.WriteUInt32(SdsHeader.Unknown32_2C);
                 sds.WriteUInt64((ulong)Header.GameVersion);
 
                 sds.Seek(sizeof(ulong), SeekOrigin.Current);
@@ -363,16 +371,16 @@ namespace sdslib
                 sds.WriteUInt32((uint)currentPosition);
                 sds.Seek(currentPosition, SeekOrigin.Begin);
 
-                sds.WriteUInt32(1819952469U);
+                sds.WriteUInt32(UEzl);
 
                 if (Header?.Version == 19)
                 {
-                    sds.WriteUInt32(Constants.SdsHeader.MaxBlockSizeV19);
+                    sds.WriteUInt32(MaxBlockSizeV19);
                 }
 
                 else if (Header?.Version == 20)
                 {
-                    sds.WriteUInt32(Constants.SdsHeader.MaxBlockSizeV20);
+                    sds.WriteUInt32(MaxBlockSizeV20);
                 }
 
                 sds.WriteUInt8(4);
@@ -488,7 +496,7 @@ namespace sdslib
                     ms.WriteUInt32(SlotVRamRequired);
                     ms.WriteUInt32(OtherRamRequired);
                     ms.WriteUInt32(OtherVRamRequired);
-                    ms.WriteUInt32(Constants.SdsHeader.Unknown32_2C);
+                    ms.WriteUInt32(SdsHeader.Unknown32_2C);
                     ms.WriteUInt64((ulong)Header.GameVersion);
                     ms.WriteUInt64(0);
                     ms.WriteUInt32((uint)Resources.Count);
@@ -583,12 +591,12 @@ namespace sdslib
             int numberOfBlocks = (int)mergedData.Length;
             if (Header?.Version == 19U)
             {
-                numberOfBlocks /= Constants.SdsHeader.MaxBlockSizeV19;
+                numberOfBlocks /= MaxBlockSizeV19;
             }
 
             else if (Header?.Version == 20U)
             {
-                numberOfBlocks /= Constants.SdsHeader.MaxBlockSizeV20;
+                numberOfBlocks /= MaxBlockSizeV20;
             }
 
             List<MemoryStream> dataBlocks = new List<MemoryStream>();
@@ -598,12 +606,12 @@ namespace sdslib
 
                 if (Header?.Version == 19U)
                 {
-                    dataBlock.Write(mergedData.ReadBytes(Constants.SdsHeader.MaxBlockSizeV19));
+                    dataBlock.Write(mergedData.ReadBytes(MaxBlockSizeV19));
                 }
 
                 else if (Header?.Version == 20U)
                 {
-                    dataBlock.Write(mergedData.ReadBytes(Constants.SdsHeader.MaxBlockSizeV20));
+                    dataBlock.Write(mergedData.ReadBytes(MaxBlockSizeV20));
                 }
 
                 dataBlocks.Add(dataBlock);
