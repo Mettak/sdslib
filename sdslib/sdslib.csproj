@@ -84,10 +84,12 @@
     <Compile Include="ResourceTypes\Mipmap.cs" />
     <Compile Include="ResourceTypes\NAV_AIWORLD_DATA.cs" />
     <Compile Include="ResourceTypes\NAV_OBJ_DATA.cs" />
+    <Compile Include="ResourceTypes\NAV_PATH_DATA.cs" />
     <Compile Include="ResourceTypes\PREFAB.cs" />
     <Compile Include="ResourceTypes\Resource.cs" />
     <Compile Include="ResourceTypes\ResourceInfo.cs" />
     <Compile Include="ResourceTypes\ResourceType.cs" />
+    <Compile Include="ResourceTypes\RoadMap.cs" />
     <Compile Include="ResourceTypes\Script.cs" />
     <Compile Include="ResourceTypes\Sound.cs" />
     <Compile Include="ResourceTypes\SoundTable.cs" />

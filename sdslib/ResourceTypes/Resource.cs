@@ -62,11 +62,7 @@ namespace sdslib.ResourceTypes
                     ms.WriteUInt32(Info.Type.Id);
                     ms.WriteUInt32(Size);
                     ms.WriteUInt16(Version);
-                    ms.WriteUInt32(SlotRamRequired);
-                    ms.WriteUInt32(SlotVRamRequired);
-                    ms.WriteUInt32(OtherRamRequired);
-                    ms.WriteUInt32(OtherVRamRequired);
-                    
+
                     if (Unknown32.HasValue)
                     {
                         ms.WriteUInt32(Unknown32.Value);
@@ -76,6 +72,11 @@ namespace sdslib.ResourceTypes
                     {
                         ms.WriteUInt32(Unknown32_2.Value);
                     }
+
+                    ms.WriteUInt32(SlotRamRequired);
+                    ms.WriteUInt32(SlotVRamRequired);
+                    ms.WriteUInt32(OtherRamRequired);
+                    ms.WriteUInt32(OtherVRamRequired);
 
                     return FNV.Hash32(ms.ReadAllBytes());
                 }

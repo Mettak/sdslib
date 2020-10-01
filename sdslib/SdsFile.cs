@@ -282,12 +282,12 @@ namespace sdslib
 
                             uint size = decompressedData.ReadUInt32();
                             ushort version = decompressedData.ReadUInt16();
+                            uint unknown32 = decompressedData.ReadUInt32();
+                            uint unknown32_2 = decompressedData.ReadUInt32();
                             uint slotRamRequired = decompressedData.ReadUInt32();
                             uint slotVRamRequired = decompressedData.ReadUInt32();
                             uint otherRamRequired = decompressedData.ReadUInt32();
                             uint otherVRamRequired = decompressedData.ReadUInt32();
-                            uint unknown32 = decompressedData.ReadUInt32();
-                            uint unknown32_2 = decompressedData.ReadUInt32();
                             uint checksum = decompressedData.ReadUInt32();
                             byte[] rawData = decompressedData.ReadBytes((int)size - Constants.Resource.StandardHeaderSizeV20);
 

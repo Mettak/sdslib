@@ -40,6 +40,8 @@ namespace sdslib
             CreateMap<Resource, SystemObjectDatabase>();
             CreateMap<Resource, Generic>();
             CreateMap<Resource, hkAnimation>();
+            CreateMap<Resource, NAV_PATH_DATA>();
+            CreateMap<Resource, RoadMap>();
         }
     }
 }

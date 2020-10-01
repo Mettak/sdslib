@@ -22,6 +22,11 @@ namespace sdslib.ResourceTypes
                     return 2U;
                 }
 
+                else if (Name == EResourceType.NAV_PATH_DATA)
+                {
+                    return 1U;
+                }
+
                 else
                 {
                     return 0U;
