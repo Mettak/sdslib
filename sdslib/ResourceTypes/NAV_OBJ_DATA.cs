@@ -9,9 +9,9 @@ namespace sdslib.ResourceTypes
 {
     public class NAV_OBJ_DATA : Resource
     {
-        public new static NAV_OBJ_DATA Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, uint? unknown32, uint? unknown32_2, byte[] rawData, IMapper mapper)
+        public new static NAV_OBJ_DATA Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, ulong? nameHash, byte[] rawData, IMapper mapper)
         {
-            NAV_OBJ_DATA type = mapper.Map<NAV_OBJ_DATA>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, unknown32, unknown32_2, rawData, null));
+            NAV_OBJ_DATA type = mapper.Map<NAV_OBJ_DATA>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, nameHash, rawData, null));
             return type;
         }
     }

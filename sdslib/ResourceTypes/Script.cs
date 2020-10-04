@@ -35,20 +35,9 @@ namespace sdslib.ResourceTypes
             }
         }
 
-        public new static Script Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, uint? unknown32, uint? unknown32_2, byte[] rawData, IMapper mapper)
+        public new static Script Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, ulong? nameHash, byte[] rawData, IMapper mapper)
         {
-            Script script = new Script
-            {
-                Guid = System.Guid.NewGuid().ToString(),
-                Info = resourceInfo,
-                Version = version,
-                SlotRamRequired = slotRamRequired,
-                SlotVRamRequired = slotVRamRequired,
-                OtherRamRequired = otherRamRequired,
-                OtherVRamRequired = otherVRamRequired,
-                Unknown32 = unknown32,
-                Unknown32_2 = unknown32_2
-            };
+            Script script = mapper.Map<Script>(Resource.Deserialize(resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, nameHash, rawData, null));
 
             using (MemoryStream memory = new MemoryStream(rawData))
             {

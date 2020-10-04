@@ -13,7 +13,7 @@ using zlib;
 
 namespace sdslib
 {
-    public class SdsFile : IDisposable
+    public partial class SdsFile : IDisposable
     {
         private const uint UEzl = 1819952469U;
 
@@ -25,7 +25,7 @@ namespace sdslib
 
         public ResourceList<Resource> Resources { get; private set; } = new ResourceList<Resource>();
 
-        public SdsHeader Header { get; set; } = new SdsHeader();
+        public SdsHeader Header { get; private set; } = new SdsHeader();
 
         [JsonIgnore]
         public uint SlotRamRequired
@@ -215,7 +215,7 @@ namespace sdslib
                                         var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
                                         var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
                                         var resourecInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
-                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, null, null, rawData, file._mapper });
+                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, null, rawData, file._mapper });
                                         file.AddResource(resourecInstance);
                                     }
                                 }
@@ -295,8 +295,7 @@ namespace sdslib
 
                             uint size = decompressedData.ReadUInt32();
                             ushort version = decompressedData.ReadUInt16();
-                            uint unknown32 = decompressedData.ReadUInt32();
-                            uint unknown32_2 = decompressedData.ReadUInt32();
+                            ulong nameHash = decompressedData.ReadUInt64();
                             uint slotRamRequired = decompressedData.ReadUInt32();
                             uint slotVRamRequired = decompressedData.ReadUInt32();
                             uint otherRamRequired = decompressedData.ReadUInt32();
@@ -307,7 +306,7 @@ namespace sdslib
                             var targetType = resourceTypes.First(x => x.Name == resourceInfo.Type.ToString());
                             var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
                             var resourceInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
-                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, unknown32, unknown32_2, rawData, file._mapper });
+                                        resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, nameHash, rawData, file._mapper });
                             file.AddResource(resourceInstance);
                         }
                     }
@@ -391,7 +390,8 @@ namespace sdslib
                 sds.WriteUInt8(4);
 
                 bool first = true;
-                foreach (MemoryStream block in MergeDataIntoBlocks())
+                int blockSize = Header?.Version == 19U ? MaxBlockSizeV19 : MaxBlockSizeV20;
+                foreach (MemoryStream block in Resources.MergeDataIntoBlocks(blockSize))
                 {
                     block.SeekToStart();
 
@@ -565,72 +565,6 @@ namespace sdslib
             };
             File.WriteAllText($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\sdscontext.json",
                 JsonConvert.SerializeObject(this, settings));
-        }
-
-        internal List<MemoryStream> MergeDataIntoBlocks()
-        {
-            MemoryStream mergedData = new MemoryStream();
-            foreach (var resource in Resources)
-            {
-                mergedData.WriteUInt32(resource.Info.Type.Id);
-                mergedData.WriteUInt32(resource.Size);
-                mergedData.WriteUInt16(resource.Version);
-                mergedData.WriteUInt32(resource.SlotRamRequired);
-                mergedData.WriteUInt32(resource.SlotVRamRequired);
-                mergedData.WriteUInt32(resource.OtherRamRequired);
-                mergedData.WriteUInt32(resource.OtherVRamRequired);
-
-                if (resource.Unknown32.HasValue &&
-                    resource.Unknown32_2.HasValue)
-                {
-                    mergedData.WriteUInt32(resource.Unknown32.Value);
-                    mergedData.WriteUInt32(resource.Unknown32_2.Value);
-                }
-
-                mergedData.WriteUInt32(resource.Checksum);
-                mergedData.Write(resource.Serialize());
-            }
-
-            mergedData.SeekToStart();
-
-            int numberOfBlocks = (int)mergedData.Length;
-            if (Header?.Version == 19U)
-            {
-                numberOfBlocks /= MaxBlockSizeV19;
-            }
-
-            else if (Header?.Version == 20U)
-            {
-                numberOfBlocks /= MaxBlockSizeV20;
-            }
-
-            List<MemoryStream> dataBlocks = new List<MemoryStream>();
-            for (int i = 0; i < numberOfBlocks; i++)
-            {
-                MemoryStream dataBlock = new MemoryStream();
-
-                if (Header?.Version == 19U)
-                {
-                    dataBlock.Write(mergedData.ReadBytes(MaxBlockSizeV19));
-                }
-
-                else if (Header?.Version == 20U)
-                {
-                    dataBlock.Write(mergedData.ReadBytes(MaxBlockSizeV20));
-                }
-
-                dataBlocks.Add(dataBlock);
-            }
-
-            if (mergedData.Position != mergedData.Length)
-            {
-                MemoryStream dataBlock = new MemoryStream();
-                dataBlock.Write(mergedData.ReadBytes((int)mergedData.Length - (int)mergedData.Position));
-                dataBlocks.Add(dataBlock);
-            }
-
-            mergedData.Close();
-            return dataBlocks;
         }
 
         public void AddResource(Resource resource)

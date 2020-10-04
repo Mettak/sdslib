@@ -33,7 +33,7 @@ namespace sdslib.ResourceTypes
         {
             get
             {
-                if (Unknown32.HasValue && Unknown32_2.HasValue)
+                if (ResourceNameHash.HasValue)
                 {
                     return StandardHeaderSizeV20 + (uint)Serialize().Length;
                 }
@@ -52,9 +52,7 @@ namespace sdslib.ResourceTypes
 
         public uint OtherVRamRequired { get; set; }
          
-        public uint? Unknown32 { get; set; }
-
-        public uint? Unknown32_2 { get; set; }
+        public ulong? ResourceNameHash { get; set; }
 
         [JsonIgnore]
         public uint Checksum
@@ -67,14 +65,9 @@ namespace sdslib.ResourceTypes
                     ms.WriteUInt32(Size);
                     ms.WriteUInt16(Version);
 
-                    if (Unknown32.HasValue)
+                    if (ResourceNameHash.HasValue)
                     {
-                        ms.WriteUInt32(Unknown32.Value);
-                    }
-
-                    if (Unknown32_2.HasValue)
-                    {
-                        ms.WriteUInt32(Unknown32_2.Value);
+                        ms.WriteUInt64(ResourceNameHash.Value);
                     }
 
                     ms.WriteUInt32(SlotRamRequired);
@@ -91,7 +84,7 @@ namespace sdslib.ResourceTypes
         public virtual byte[] Data { get; set; }
 
         public static Resource Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired,
-            uint? unknown32, uint? unknown32_2, byte[] rawData, IMapper mapper)
+            ulong? nameHash, byte[] rawData, IMapper mapper)
         {
             return new Resource
             {
@@ -102,8 +95,7 @@ namespace sdslib.ResourceTypes
                 SlotVRamRequired = slotVRamRequired,
                 OtherRamRequired = otherRamRequired,
                 OtherVRamRequired = otherVRamRequired,
-                Unknown32 = unknown32,
-                Unknown32_2 = unknown32_2,
+                ResourceNameHash = nameHash,
                 Data = rawData
             };
         }
