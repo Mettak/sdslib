@@ -60,7 +60,6 @@
     <Compile Include="Oodle\Oodle.cs" />
     <Compile Include="Oodle\OodleCompressionLevel.cs" />
     <Compile Include="Oodle\OodleFormat.cs" />
-    <Compile Include="ResourceTypeList.cs" />
     <Compile Include="ResourceTypes\Actors.cs" />
     <Compile Include="ResourceTypes\AnimalTrafficPaths.cs" />
     <Compile Include="ResourceTypes\AnimatedTexture.cs" />
@@ -103,7 +102,6 @@
     <Compile Include="SdsFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SdsHeader.cs" />
-    <Compile Include="ResourceList.cs" />
     <Compile Include="StreamHelpers.cs" />
   </ItemGroup>
   <ItemGroup>

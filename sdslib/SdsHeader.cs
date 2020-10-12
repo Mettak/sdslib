@@ -32,9 +32,7 @@ namespace sdslib
         [JsonIgnore]
         public uint XmlOffset { get; set; }
 
-        public EGameVersion GameVersion { get; set; } = EGameVersion.DefinitiveEdition;
-
-        public ResourceTypeList ResourceTypes { get; set; } = new ResourceTypeList();
+        public EGameVersion GameVersion { get; set; }
 
         public static SdsHeader FromFile(string sdsFilePath)
         {
@@ -122,42 +120,11 @@ namespace sdslib
 
                 uint checksum = fileStream.ReadUInt32();
 
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    ms.WriteUInt32(header.ResourceTypeTableOffset);
-                    ms.WriteUInt32(header.BlockTableOffset);
-                    ms.WriteUInt32(header.XmlOffset);
-                    ms.WriteUInt32(slotRamRequired);
-                    ms.WriteUInt32(slotVRamRequired);
-                    ms.WriteUInt32(otherRamRequired);
-                    ms.WriteUInt32(otherVRamRequired);
-                    ms.WriteUInt32(Unknown32_2C);
-                    ms.WriteUInt64((ulong)header.GameVersion);
-                    ms.WriteUInt64(0);
-                    ms.WriteUInt32(numberOfFiles);
+                uint calculatedChecksum = FNV.Hash32(header.ResourceTypeTableOffset, header.BlockTableOffset, header.XmlOffset, slotRamRequired,
+                    slotVRamRequired, otherRamRequired, otherVRamRequired, Unknown32_2C, (ulong)header.GameVersion, 0UL, numberOfFiles);
 
-                    uint calculatedChecksum = FNV.Hash32(ms.ReadAllBytes());
-
-                    if (calculatedChecksum != checksum)
-                        throw new Exception("Checksum difference!");
-                }
-
-                fileStream.Seek(header.ResourceTypeTableOffset, SeekOrigin.Begin);
-                uint numberOfResources = fileStream.ReadUInt32();
-                for (int i = 0; i < numberOfResources; i++)
-                {
-                    ResourceType resourceType = new ResourceType();
-                    resourceType.Id = fileStream.ReadUInt32();
-                    uint resourceLenght = fileStream.ReadUInt32();
-                    string typeStr = fileStream.ReadString((int)resourceLenght).Replace(" ", "");
-                    resourceType.Name = (EResourceType)Enum.Parse(typeof(EResourceType), typeStr);
-                    uint unknown32 = fileStream.ReadUInt32();
-                    if (unknown32 != resourceType.Unknown32)
-                    {
-                        throw new InvalidDataException(unknown32.ToString());
-                    }
-                    header.ResourceTypes.Add(resourceType);
-                }
+                if (calculatedChecksum != checksum)
+                    throw new Exception("Checksum difference!");
             }
 
             return header;

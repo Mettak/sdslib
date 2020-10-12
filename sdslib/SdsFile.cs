@@ -5,6 +5,7 @@ using sdslib.Enums;
 using sdslib.ResourceTypes;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -23,7 +24,29 @@ namespace sdslib
 
         private readonly IMapper _mapper;
 
-        public ResourceList<Resource> Resources { get; private set; } = new ResourceList<Resource>();
+        [JsonIgnore]
+        public ReadOnlyCollection<ResourceType> ResourceTypes
+        {
+            get
+            {
+                return _resourceTypes.AsReadOnly();
+            }
+        }
+
+        [JsonProperty("ResourceTypes")]
+        private List<ResourceType> _resourceTypes = new List<ResourceType>();
+
+        [JsonIgnore]
+        public ReadOnlyCollection<Resource> Resources
+        {
+            get
+            {
+                return _resources.AsReadOnly();
+            }
+        }
+
+        [JsonProperty("Resources")]
+        private List<Resource> _resources = new List<Resource>();
 
         public SdsHeader Header { get; private set; } = new SdsHeader();
 
@@ -32,7 +55,7 @@ namespace sdslib
         {
             get
             {
-                return (uint)Resources.Sum(x => x.SlotRamRequired);
+                return (uint)_resources.Sum(x => x.SlotRamRequired);
             }
         }
 
@@ -41,7 +64,7 @@ namespace sdslib
         {
             get
             {
-                return (uint)Resources.Sum(x => x.SlotVRamRequired);
+                return (uint)_resources.Sum(x => x.SlotVRamRequired);
             }
         }
 
@@ -50,7 +73,7 @@ namespace sdslib
         {
             get
             {
-                return (uint)Resources.Sum(x => x.OtherRamRequired);
+                return (uint)_resources.Sum(x => x.OtherRamRequired);
             }
         }
 
@@ -59,7 +82,7 @@ namespace sdslib
         {
             get
             {
-                return (uint)Resources.Sum(x => x.OtherVRamRequired);
+                return (uint)_resources.Sum(x => x.OtherVRamRequired);
             }
         }
 
@@ -80,7 +103,7 @@ namespace sdslib
 
                 string xmlFile = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<xml>\n";
 
-                foreach (var resource in Resources)
+                foreach (var resource in _resources)
                 {
                     xmlFile += "\t<ResourceInfo>\n\t\t<CustomDebugInfo/>\n\t\t";
                     xmlFile += "<TypeName>" + resource.Info.Type.ToString() + "</TypeName>\n\t\t";
@@ -113,6 +136,23 @@ namespace sdslib
 
             using (FileStream fileStream = new FileStream(sdsPath, FileMode.Open, FileAccess.Read))
             {
+                fileStream.Seek(file.Header.ResourceTypeTableOffset, SeekOrigin.Begin);
+                uint numberOfResources = fileStream.ReadUInt32();
+                for (int i = 0; i < numberOfResources; i++)
+                {
+                    ResourceType resourceType = new ResourceType();
+                    resourceType.Id = fileStream.ReadUInt32();
+                    uint resourceLenght = fileStream.ReadUInt32();
+                    string typeStr = fileStream.ReadString((int)resourceLenght).Replace(" ", "");
+                    resourceType.Name = (EResourceType)Enum.Parse(typeof(EResourceType), typeStr);
+                    uint unknown32 = fileStream.ReadUInt32();
+                    if (unknown32 != resourceType.Unknown32)
+                    {
+                        throw new InvalidDataException(unknown32.ToString());
+                    }
+                    file.AddResourceType(resourceType);
+                }
+
                 fileStream.Seek(file.Header.BlockTableOffset, SeekOrigin.Begin);
 
                 #region Version 19
@@ -190,7 +230,7 @@ namespace sdslib
                                     {
                                         resourceInfo = new ResourceInfo();
                                         var resourceType = (EResourceType)Enum.Parse(typeof(EResourceType), xmlReader.ReadElementContentAsString());
-                                        resourceInfo.Type = file.Header.ResourceTypes.First(x => x.Name == resourceType);
+                                        resourceInfo.Type = file._resourceTypes.First(x => x.Name == resourceType);
                                     }
 
                                     else if (xmlReader.Name == "SourceDataDescription")
@@ -216,7 +256,7 @@ namespace sdslib
                                         var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
                                         var resourecInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
                                         resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, null, rawData, file._mapper });
-                                        file.AddResource(resourecInstance);
+                                        file._resources.Add(resourecInstance);
                                     }
                                 }
                             }
@@ -291,7 +331,7 @@ namespace sdslib
                             uint resId = decompressedData.ReadUInt32();
 
                             ResourceInfo resourceInfo = new ResourceInfo();
-                            resourceInfo.Type = file.Header.ResourceTypes.First(x => x.Id == resId);
+                            resourceInfo.Type = file._resourceTypes.First(x => x.Id == resId);
 
                             uint size = decompressedData.ReadUInt32();
                             ushort version = decompressedData.ReadUInt16();
@@ -307,7 +347,7 @@ namespace sdslib
                             var deserializeMethod = targetType.GetMethod(nameof(Resource.Deserialize));
                             var resourceInstance = (Resource)deserializeMethod.Invoke(null, new object[] {
                                         resourceInfo, version, slotRamRequired, slotVRamRequired, otherRamRequired, otherVRamRequired, nameHash, rawData, file._mapper });
-                            file.AddResource(resourceInstance);
+                            file._resources.Add(resourceInstance);
                         }
                     }
                 }
@@ -355,13 +395,13 @@ namespace sdslib
                 sds.WriteUInt64((ulong)Header.GameVersion);
 
                 sds.Seek(sizeof(ulong), SeekOrigin.Current);
-                sds.WriteUInt32((uint)Resources.Count);
+                sds.WriteUInt32((uint)_resources.Count);
 
                 headerChecksumPosition = sds.Position;
                 sds.Seek(sizeof(uint), SeekOrigin.Current);
 
-                sds.WriteUInt32((uint)Header.ResourceTypes.Count);
-                foreach (ResourceType resourceType in Header.ResourceTypes)
+                sds.WriteUInt32((uint)_resourceTypes.Count);
+                foreach (ResourceType resourceType in _resourceTypes)
                 {
                     sds.WriteUInt32(resourceType.Id);
                     sds.WriteUInt32((uint)resourceType.ToString().Length);
@@ -391,7 +431,7 @@ namespace sdslib
 
                 bool first = true;
                 int blockSize = Header?.Version == 19U ? MaxBlockSizeV19 : MaxBlockSizeV20;
-                foreach (MemoryStream block in Resources.MergeDataIntoBlocks(blockSize))
+                foreach (MemoryStream block in MergeDataIntoBlocks(blockSize))
                 {
                     block.SeekToStart();
 
@@ -492,21 +532,8 @@ namespace sdslib
 
                 sds.Seek(headerChecksumPosition, SeekOrigin.Begin);
 
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    ms.WriteUInt32(Header.ResourceTypeTableOffset);
-                    ms.WriteUInt32(Header.BlockTableOffset);
-                    ms.WriteUInt32(Header.XmlOffset);
-                    ms.WriteUInt32(SlotRamRequired);
-                    ms.WriteUInt32(SlotVRamRequired);
-                    ms.WriteUInt32(OtherRamRequired);
-                    ms.WriteUInt32(OtherVRamRequired);
-                    ms.WriteUInt32(SdsHeader.Unknown32_2C);
-                    ms.WriteUInt64((ulong)Header.GameVersion);
-                    ms.WriteUInt64(0);
-                    ms.WriteUInt32((uint)Resources.Count);
-                    sds.WriteUInt32(FNV.Hash32(ms.ReadAllBytes()));
-                }
+                sds.WriteUInt32(FNV.Hash32(Header.ResourceTypeTableOffset, Header.BlockTableOffset, Header.XmlOffset, SlotRamRequired, SlotVRamRequired, 
+                    OtherRamRequired, OtherVRamRequired, SdsHeader.Unknown32_2C, (ulong)Header.GameVersion, 0UL, (uint)_resources.Count));
 
                 if (Header?.Version == 19U)
                 {
@@ -531,9 +558,9 @@ namespace sdslib
             };
             SdsFile file = JsonConvert.DeserializeObject<SdsFile>(File.ReadAllText($@"{path}\sdscontext.json"), settings);
 
-            foreach (var resource in file.Resources)
+            foreach (var resource in file._resources)
             {
-                resource.Info.Type = file.Header.ResourceTypes.First(x => x.ToString() == resource.GetType().Name);
+                resource.Info.Type = file._resourceTypes.First(x => x.ToString() == resource.GetType().Name);
 
                 if (resource is Script)
                 {
@@ -556,7 +583,7 @@ namespace sdslib
 
         public void ExportToDirectory(string path)
         {
-            Resources.ForEach(x => x.Extract($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\{x.Info.Type}\{x.Name}"));
+            _resources.ForEach(x => x.Extract($@"{path}\{System.IO.Path.GetFileNameWithoutExtension(Header.Name)}\{x.Info.Type}\{x.Name}"));
             JsonSerializerSettings settings = new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto,
@@ -567,14 +594,9 @@ namespace sdslib
                 JsonConvert.SerializeObject(this, settings));
         }
 
-        public void AddResource(Resource resource)
-        {
-            Resources.Add(resource, Header?.ResourceTypes);
-        }
-
         public T GetResourceByTypeAndName<T>(string name) where T : Resource
         {
-            return (T)Resources.FirstOrDefault(x => x is T && x.Name == name);
+            return (T)_resources.FirstOrDefault(x => x is T && x.Name == name);
         }
 
         public void ExtractResourcesByType<T>(string path) where T : Resource
@@ -585,18 +607,113 @@ namespace sdslib
                 throw new Exception("Cannot call this function with base type.");
             }
 
-            Resources.FindAll(x => x is T).ForEach(x => x.Extract($@"{path}\{x.Name}"));
+            _resources.FindAll(x => x is T).ForEach(x => x.Extract($@"{path}\{x.Name}"));
         }
 
-        public void AddResourceType(EResourceType resourceType)
+        public void AddResource(Resource resource)
         {
-            Header?.ResourceTypes.Add(resourceType);
+            if (_resourceTypes == null)
+            {
+                throw new ArgumentNullException(nameof(_resourceTypes));
+            }
+
+            if (resource.GetType().BaseType != typeof(Resource))
+            {
+                throw new Exception("Cannot add base type with this function.");
+            }
+
+            string typeName = resource.GetType().Name;
+
+            var type = _resourceTypes.FirstOrDefault(x => x.ToString() == typeName);
+            resource.Info.Type = type ?? throw new Exception($"Resource type {typeName} not found");
+            _resources.Add(resource);
+        }
+
+        public void AddResourceType(ResourceType item)
+        {
+            if (_resourceTypes.Any(x => x.Name == item.Name))
+            {
+                throw new Exception("Collection already contains this resource type");
+            }
+
+            if (_resourceTypes.Any(x => x.Id == item.Id))
+            {
+                throw new Exception("Index already used by another resource type");
+            }
+
+            _resourceTypes.Add(item);
+        }
+
+        public void AddResourceType(EResourceType item)
+        {
+            if (_resourceTypes.Any(x => x.Name == item))
+            {
+                throw new Exception("Collection already contains this resource type");
+            }
+
+            uint index = 0;
+            if (_resourceTypes.Count > 0)
+            {
+                index = _resourceTypes.Last().Id + 1;
+            }
+
+            _resourceTypes.Add(new ResourceType
+            {
+                Id = index,
+                Name = item
+            });
+        }
+
+        internal List<MemoryStream> MergeDataIntoBlocks(int blockSize)
+        {
+            MemoryStream mergedData = new MemoryStream();
+            foreach (var resource in _resources)
+            {
+                mergedData.WriteUInt32(resource.Info.Type.Id);
+                mergedData.WriteUInt32(resource.Size);
+                mergedData.WriteUInt16(resource.Version);
+
+                if (resource.ResourceNameHash.HasValue)
+                {
+                    mergedData.WriteUInt64(resource.ResourceNameHash ??
+                        throw new NullReferenceException(nameof(resource.ResourceNameHash)));
+                }
+
+                mergedData.WriteUInt32(resource.SlotRamRequired);
+                mergedData.WriteUInt32(resource.SlotVRamRequired);
+                mergedData.WriteUInt32(resource.OtherRamRequired);
+                mergedData.WriteUInt32(resource.OtherVRamRequired);
+                mergedData.WriteUInt32(resource.Checksum);
+                mergedData.Write(resource.Serialize());
+            }
+
+            mergedData.SeekToStart();
+
+            int numberOfBlocks = (int)mergedData.Length / blockSize;
+
+            List<MemoryStream> dataBlocks = new List<MemoryStream>();
+            for (int i = 0; i < numberOfBlocks; i++)
+            {
+                MemoryStream dataBlock = new MemoryStream();
+                dataBlock.Write(mergedData.ReadBytes(blockSize));
+                dataBlocks.Add(dataBlock);
+            }
+
+            if (mergedData.Position != mergedData.Length)
+            {
+                MemoryStream dataBlock = new MemoryStream();
+                dataBlock.Write(mergedData.ReadBytes((int)mergedData.Length - (int)mergedData.Position));
+                dataBlocks.Add(dataBlock);
+            }
+
+            mergedData.Close();
+            return dataBlocks;
         }
 
         public void Dispose()
         {
             Header = null;
-            Resources = null;
+            _resources = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }

@@ -59,24 +59,8 @@ namespace sdslib.ResourceTypes
         {
             get
             {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    ms.WriteUInt32(Info.Type.Id);
-                    ms.WriteUInt32(Size);
-                    ms.WriteUInt16(Version);
-
-                    if (ResourceNameHash.HasValue)
-                    {
-                        ms.WriteUInt64(ResourceNameHash.Value);
-                    }
-
-                    ms.WriteUInt32(SlotRamRequired);
-                    ms.WriteUInt32(SlotVRamRequired);
-                    ms.WriteUInt32(OtherRamRequired);
-                    ms.WriteUInt32(OtherVRamRequired);
-
-                    return FNV.Hash32(ms.ReadAllBytes());
-                }
+                return FNV.Hash32(Info.Type.Id, Size, Version, ResourceNameHash ?? null, 
+                    SlotRamRequired, SlotVRamRequired, OtherRamRequired, OtherVRamRequired);
             }
         }
 
