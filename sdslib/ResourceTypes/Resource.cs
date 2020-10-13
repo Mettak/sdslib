@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using Newtonsoft.Json;
+using sdslib.Enums;
+using System.Collections.Generic;
 using System.IO;
 
 namespace sdslib.ResourceTypes
@@ -66,6 +68,9 @@ namespace sdslib.ResourceTypes
 
         [JsonIgnore]
         public virtual byte[] Data { get; set; }
+
+        [JsonIgnore]
+        public virtual Dictionary<uint, List<ushort>> SupportedVersions { get; }
 
         public static Resource Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired,
             ulong? nameHash, byte[] rawData, IMapper mapper)

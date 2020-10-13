@@ -614,12 +614,36 @@ namespace sdslib
         {
             if (_resourceTypes == null)
             {
-                throw new ArgumentNullException(nameof(_resourceTypes));
+                throw new ArgumentNullException(nameof(ResourceTypes));
             }
 
             if (resource.GetType().BaseType != typeof(Resource))
             {
-                throw new Exception("Cannot add base type with this function.");
+                throw new Exception("Cannot add base type.");
+            }
+
+            if (resource.Version == 0)
+            {
+                throw new ArgumentException(nameof(resource.Version));
+            }
+
+            if (resource.Data == null)
+            {
+                throw new ArgumentNullException(nameof(resource.Data));
+            }
+
+            if (resource.SupportedVersions != null)
+            {
+                var versionSupported = resource.SupportedVersions.FirstOrDefault(x => x.Key == Header.Version);
+                if (versionSupported.Key == 0)
+                {
+                    throw new NotSupportedException($"SDS version {Header.Version} not supporting this resource type");
+                }
+
+                if (!versionSupported.Value.Any(x => x == resource.Version))
+                {
+                    throw new NotSupportedException($"Version {resource.Version} not supported by this SDS version");
+                }
             }
 
             string typeName = resource.GetType().Name;

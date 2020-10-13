@@ -1,4 +1,5 @@
 using AutoMapper;
+using sdslib.Enums;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,25 @@ namespace sdslib.ResourceTypes
     public class MemFile : Resource
     {
         public string Path { get; set; }
+
+        public override Dictionary<uint, List<ushort>> SupportedVersions =>
+            new Dictionary<uint, List<ushort>>()
+            {
+                {
+                    19U,
+                    new List<ushort>()
+                    {
+                        2
+                    }
+                },
+                {
+                    20U,
+                    new List<ushort>()
+                    {
+                        4
+                    }
+                },
+            };
 
         public new static MemFile Deserialize(ResourceInfo resourceInfo, ushort version, uint slotRamRequired, uint slotVRamRequired, uint otherRamRequired, uint otherVRamRequired, ulong? nameHash, byte[] rawData, IMapper mapper)
         {
