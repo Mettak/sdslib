@@ -1,5 +1,8 @@
+# INFO
+This project is currently suspended. I'm not planning working on it in early future. There is much more better tool called <a href="https://github.com/Greavesy1899/MafiaToolkit" target=_blank><b>Mafia: Toolkit</b></a>, so please, use it instead.
+
 # sdslib
-<b>sdslib</b> is DLL library written in C# with whose help you can manage SDS files. This library gives you ability to create .NET applications for modding games which using <b>The Illusion Engine</b>. Development of this library requires reverse engineering.
+<b>sdslib</b> is a .NET library written in C# for manage SDS files. This library gives you ability to create .NET applications for modding games which are using <b>The Illusion Engine</b>. Development of this library requires reverse engineering.
 
 ## Features
 ### Version 19
