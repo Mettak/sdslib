@@ -11,6 +11,8 @@ namespace sdslib
     {
         public const int HeaderSize = 72;
 
+        public const uint MinSupportedVersion = 19U;
+
         public const uint MaxSupportedVersion = 20U;
 
         public const uint Encrypted = 1049068U;
@@ -52,7 +54,7 @@ namespace sdslib
                 }
 
                 header.Version = fileStream.ReadUInt32();
-                if (header.Version > MaxSupportedVersion)
+                if (header.Version < MinSupportedVersion || header.Version > MaxSupportedVersion)
                 {
                     throw new NotSupportedException($"Version {header.Version} not supported");
                 }

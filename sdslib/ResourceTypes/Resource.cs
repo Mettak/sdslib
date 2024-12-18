@@ -14,7 +14,7 @@ namespace sdslib.ResourceTypes
 
         public string Guid { get; set; } = System.Guid.NewGuid().ToString();
 
-        public ResourceInfo Info { get; set; } = new ResourceInfo();
+        public ResourceInfo Info { get; private set; } = new ResourceInfo();
 
         [JsonIgnore]
         public string Name

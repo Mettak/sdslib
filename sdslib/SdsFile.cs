@@ -646,6 +646,11 @@ namespace sdslib
                 }
             }
 
+            if (Header.Version >= 20U && !resource.ResourceNameHash.HasValue)
+            {
+                throw new ArgumentNullException(nameof(resource.ResourceNameHash));
+            }
+
             string typeName = resource.GetType().Name;
 
             var type = _resourceTypes.FirstOrDefault(x => x.ToString() == typeName);
@@ -738,6 +743,7 @@ namespace sdslib
         {
             Header = null;
             _resources = null;
+            _resourceTypes = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }

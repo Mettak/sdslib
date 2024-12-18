@@ -11,8 +11,6 @@ namespace sdslib.ResourceTypes
 {
     public class MemFile : Resource
     {
-        public string Path { get; set; }
-
         public override Dictionary<uint, List<ushort>> SupportedVersions =>
             new Dictionary<uint, List<ushort>>()
             {
@@ -41,7 +39,7 @@ namespace sdslib.ResourceTypes
                 using (MemoryStream memory = new MemoryStream(rawData))
                 {
                     uint pathLength = memory.ReadUInt32();
-                    type.Path = memory.ReadString((int)pathLength);
+                    memory.ReadString((int)pathLength);
                     memory.Seek(sizeof(uint), SeekOrigin.Current);
                     memory.Seek(sizeof(uint), SeekOrigin.Current);
                     byte[] buffer = memory.ReadAllBytesFromCurrentPosition();
@@ -55,8 +53,7 @@ namespace sdslib.ResourceTypes
                 {
                     memory.Seek(sizeof(uint), SeekOrigin.Begin);
                     uint pathLength = memory.ReadUInt32();
-                    type.Path = memory.ReadString((int)pathLength);
-                    type.Info.SourceDataDescription = type.Path;
+                    type.Info.SourceDataDescription = memory.ReadString((int)pathLength);
                     memory.Seek(sizeof(uint), SeekOrigin.Current);
                     memory.Seek(sizeof(uint), SeekOrigin.Current);
                     uint dataLength = memory.ReadUInt32();
@@ -74,8 +71,8 @@ namespace sdslib.ResourceTypes
                 using (MemoryStream memory = new MemoryStream())
                 {
                     byte[] unicodeData = Encoding.Unicode.GetBytes(Encoding.Unicode.GetString(Data));
-                    memory.WriteUInt32((uint)Path.Length);
-                    memory.WriteString(Path);
+                    memory.WriteUInt32((uint)Info.SourceDataDescription.Length);
+                    memory.WriteString(Info.SourceDataDescription);
                     memory.WriteUInt32(1U);
                     memory.WriteUInt32((uint)unicodeData.Length);
                     memory.Write(unicodeData);
@@ -88,8 +85,8 @@ namespace sdslib.ResourceTypes
                 using (MemoryStream memory = new MemoryStream())
                 {
                     memory.WriteUInt32(0U);
-                    memory.WriteUInt32((uint)Path.Length);
-                    memory.WriteString(Path);
+                    memory.WriteUInt32((uint)Info.SourceDataDescription.Length);
+                    memory.WriteString(Info.SourceDataDescription);
                     memory.WriteUInt32(1U);
                     memory.WriteUInt32(16U);
                     memory.WriteUInt32((uint)Data.Length);
